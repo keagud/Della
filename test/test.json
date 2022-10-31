@@ -1,0 +1,21 @@
+{
+    "owner_id": "me",
+    "projects": [
+        {
+            "name": "A new project",
+            "project_id": "pp",
+            "tasks": [
+                {
+                    "content": "finish della",
+                    "due_date": "",
+                    "repeat": "0"
+                },
+                {
+                    "content": "finish della for real",
+                    "due_date": "2022-10-14",
+                    "repeat": "0"
+                }
+            ]
+        }
+    ]
+}
