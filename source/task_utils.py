@@ -4,7 +4,9 @@ from typing import Any
 import json, datetime
 from datetime import date
 import dateparse
+import toml
 
+import re
 from dateparse import Date_Formats
 
 
@@ -100,28 +102,51 @@ class Project:
 class Planner:
     def load_from_dict(self, d: dict) -> None:
         self.owner_id = d["owner_id"]
-        self.projects = [
-            Project(name=p["name"], project_id=p["project_id"]) for p in d["projects"]
-        ]
+        self.projects: dict[str, Project] = {
+            p["name"]: Project(name=p["name"], project_id=p["project_id"])
+            for p in d["projects"]
+        }
 
-    def load_from_json(self, filename: str) -> None:
+    def load_from_file(self, filename: str) -> None:
+
+        valid_extensions = [".toml", ".json"]
+
+        if (
+            not (file_extension_match := re.search(r"\..*?$", filename))
+            or file_extension_match[0] not in valid_extensions
+        ):
+            raise FileNotFoundError(
+                "Unknown file extension for file '{}'\n Valid exensions are: {}".format(
+                    filename, ", ".join(valid_extensions)
+                )
+            )
+
+        file_extension = file_extension_match[0]
         with open(filename, "r") as input_file:
-            parsed_json: dict = json.load(input_file)
-            self.load_from_dict(parsed_json)
+
+            match (file_extension):
+                case ".toml":
+                    parsed_file = toml.load(input_file)
+                case ".json":
+                    parsed_file = json.load(input_file)
+
+                case _:
+                    raise IndexError("Unhandled filetype: '{}'".format(file_extension))
+
+        self.load_from_dict(parsed_file)
 
     def __init__(self, owner_id: str = "", file: str | None = None):
 
         if file is not None:
-            self.load_from_json(file)
+            self.load_from_file(file)
 
         else:
             self.owner_id: str = owner_id
-            self.projects: list[Project] = []
 
     def to_dict(self) -> dict:
         return {
             "owner_id": self.owner_id,
-            "projects": [p.to_dict() for p in self.projects],
+            "projects": [p.to_dict() for p in self.projects.values()],
         }
 
     def save_to_json(self, filename: str) -> None:
@@ -129,4 +154,6 @@ class Planner:
             json.dump(self.to_dict(), output_file, indent=4)
 
     def new_project(self, project_name: str, project_id: str) -> None:
-        self.projects.append(Project(project_name, project_id))
+        self.projects[project_id] = Project(project_name, project_id)
+
+

@@ -156,6 +156,21 @@ def write_projects_to_file(output_filename: str = DEFAULT_FILENAME) -> None:
         output_file.write(write_string)
 
 
+class Planner:
+
+    name: str = ""
+    file: str = ""
+    
+    projects: dict[str, Project]
+
+    def __init__(self, name: str = "", projects_file: str = "") -> None:
+        self.name = name
+        self.file = projects_file
+
+
+
+
+
 # loads the JSON in input_filename into Project objects
 # which are stored in PROJECTS_INDEX and are indexed by Project.proj_id
 def load_projects_from_file(
