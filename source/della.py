@@ -1,9 +1,9 @@
 import json, datetime, re, os
+
+from datetime import date, datetime
 from datetime import date as Date
-from datetime import datetime
+
 from datetime import timedelta
-
-
 
 
 # TODO
@@ -17,6 +17,9 @@ PROJECTS_INDEX = {}
 
 # date format for changing between date objects and strings
 ISO_DATE_FORMAT = r"%Y-%m-%d"
+
+
+# TODO should this maybe be TOML?
 
 DEFAULT_FILENAME = "projects.json"  # default filename for reading/writing project JSON
 
@@ -55,6 +58,7 @@ class Project:
 
     # can delete a task by number(one-indexed position in Project.tasks[])
     # or directly by passing the Task object to be deleted
+
     def del_task(self, task_number: int):
 
         if task_number > len(self.tasks) or task_number < 1:
@@ -66,10 +70,6 @@ class Project:
             )
 
         del self.tasks[task_number - 1]
-
-	def del_task(self, deleted_task):
-        if deleted_task in self.tasks:
-            self.tasks.remove(deleted_task)
 
     def to_json(self) -> str:
 
@@ -85,48 +85,56 @@ class Project:
 
 class Task:
     content = ""
-    due_date = None
+    due_date: Date | None = None
     repeats = False
     repeat_interval = 0
 
-    def __init__(self, content: str, due_date: Date, repeats=False, repeat_interval=0):
+    def __init__(
+        self,
+        content: str,
+        due_date: Date | None = None,
+        repeats=False,
+        repeat_interval=0,
+    ):
         self.content = content
         self.due_date = due_date
         self.repeats = repeats
         self.repeat_interval = repeat_interval
 
-    # overloading the constructor to allow the Dicts returned by json.loads() # to be converted directly to Task objects
-    def __init__(self, d: dict):
-        self.content = d["content"]
-        self.due_date = datetime.strptime(d["due_date"], ISO_DATE_FORMAT)
-        self.repeats = d["repeats"]
-        self.repeat_interval = d["repeat_interval"]
-
     def to_dict(self) -> dict:
         return {
             "content": self.content,
-            "due_date": self.due_date.strftime(ISO_DATE_FORMAT),
+            "due_date": self.due_date.strftime(ISO_DATE_FORMAT)
+            if self.due_date is not None
+            else "",
             "repeats": self.repeats,
             "repeat_interval": self.repeat_interval,
         }
 
-    def get_time_until(self) -> timedelta:
-        now = datetime.now()
+    def get_time_until(self) -> timedelta | None:
+
+        if self.due_date is None:
+            return None
+
+        now: Date = datetime.now()
         delta = self.due_date - now
         return delta
 
+    # TODO justify text to line up consistantly in nice columns
     def display(self, countdown: bool = False):
-        display_string = "{}\n\t{}".format(
-            self.content, self.due_date.strftime("%a, %b %-d %y")
+        display_string = "{} | {}".format(
+            self.content,
+            self.due_date.strftime("%a, %b %-d %y")
+            if self.due_date is not None
+            else "(no due date)",
         )  # "Wed, Oct 3 22"
 
-        if countdown:
-            display_string += " | in {} days".format(self.get_time_until().days)
+        if countdown and self.due_date is not None:
+            display_string += "in {} days".format(self.get_time_until().days)
 
         if self.repeats:
-            display_string.append(
-                " | repeats every {} days".format(str(self.repeat_interval))
-            )
+            display_string += "repeats every {} days".format(str(self.repeat_interval))
+
         return display_string
 
 
@@ -257,4 +265,4 @@ def shell(prompt: str = "@>"):
                 break
 
         except Exception as e:
-            printf(str(e))
+            print(str(e))
