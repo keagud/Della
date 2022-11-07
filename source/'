@@ -17,37 +17,26 @@ from dateparse import Date_Formats
 
 
 class Task:
-
-
-
-
     def __init__(
         self,
         content: str = "",
         due_date: date | str | None = None,
         repeat: int | str = 0,
-        task_dict: dict | None = None,
     ) -> None:
-
-        if task_dict is not None:
-            self.load_from_dict(task_dict)
-            return
-
         self.content: str = content
 
-        if due_date and due_date is not None:
-            self.due_date = (
-                due_date if isinstance(due_date, date) else date.fromisoformat(due_date)
-            )
-        else:
-            self.due_date = None
+        self.due_date: date | None = (
+            due_date
+            if isinstance(due_date, date) or due_date is None
+            else date.fromisoformat(due_date)
+        )
 
         self.repeat: int = int(repeat)
 
     def to_dict(self) -> dict:
         return {
             "content": self.content,
-            "due_date": self.due_date.isoformat() if isinstance(self.due_date, date) else "",
+            "due_date": "" if self.due_date is None else self.due_date.isoformat(),
             "repeat": str(self.repeat),
         }
 
@@ -70,16 +59,7 @@ class Task:
 
 
 class Project:
-    def __init__(
-        self,
-        name: str | None = None,
-        project_id: str | None = None,
-        project_dict: dict | None = None,
-    ):
-
-        if project_dict is not None:
-            self.load_from_dict(project_dict)
-            return
+    def __init__(self, name: str, project_id: str):
 
         self.name = name
         self.project_id = project_id
@@ -94,11 +74,8 @@ class Project:
 
     def load_from_dict(self, d: dict):
 
-        self.name = d["name"]
-        self.project_id = d["project_id"]
-        self.tasks = [Task(task_dict=t) for t in d["tasks"]]
-
-        return self
+        self.__init__(name=d["name"], project_id=d["project_id"])
+        self.tasks = [t.load_from_dict() for t in d["tasks"]]
 
     def new_task(
         self,
@@ -125,8 +102,64 @@ class Project:
 
 ###########################################################################
 class Planner:
+    def load_from_dict(self, d: dict) -> None:
+        self.owner_id = d["owner_id"]
 
-    projects: dict[str, Project] = {}
+        self.projects: dict[str, Project] = {
+            p["name"]: Project(name=p["name"], project_id=p["project_id"])
+            for p in d["projects"]
+        }
+
+    def __sync_filestream(self, filename: str, action: str = "r") -> dict | None:
+
+        if (open_param := action.lower()[0]) not in ('r','w'):
+            raise KeyError("Use 'w' or 'r' to write to or read from the file")
+
+        self.__sync_filestream.valid_extensions = {
+            "." + ext: getmodule(ext) for ext in ("toml", "json")
+        }
+
+        if (
+            not (file_extension_match := re.search(r"\..*?$", filename))
+            or file_extension_match[0] not in self.__sync_filestream.valid_extensions
+        ):
+            raise FileNotFoundError(
+                "Unknown file extension for file '{}'\n Valid exensions are: {}".format(
+                    filename, ", ".join(self.__sync_filestream.valid_extensions.keys())
+                )
+            )
+
+        file_module = self.__sync_filestream.valid_extensions[file_extension_match[0]]
+
+        
+
+    def load_from_file(self, filename: str) -> None:
+
+        valid_extensions = [".toml", ".json"]
+
+        if (
+            not (file_extension_match := re.search(r"\..*?$", filename))
+            or file_extension_match[0] not in valid_extensions
+        ):
+            raise FileNotFoundError(
+                "Unknown file extension for file '{}'\n Valid exensions are: {}".format(
+                    filename, ", ".join(valid_extensions)
+                )
+            )
+
+        file_extension = file_extension_match[0]
+        with open(filename, "r") as input_file:
+
+            match (file_extension):
+                case ".toml":
+                    parsed_file = toml.load(input_file)
+                case ".json":
+                    parsed_file = json.load(input_file)
+
+                case _:
+                    raise IndexError("Unhandled filetype: '{}'".format(file_extension))
+
+        self.load_from_dict(parsed_file)
 
     def __init__(self, owner_id: str = "", file: str | None = None):
 
@@ -137,61 +170,15 @@ class Planner:
             self.owner_id: str = owner_id
             self.projects = {}
 
-    def load_from_dict(self, d: dict) -> None:
-        self.owner_id: str = d["owner_id"]
-
-        projects_dict = d["projects"]
-
-        self.projects = {
-            p["project_id"]: Project(project_dict=p) for p in projects_dict.values()
-        }
-
     def to_dict(self) -> dict:
         return {
             "owner_id": self.owner_id,
-            "projects": {p: self.projects[p].to_dict() for p in self.projects},
+            "projects": [p.to_dict() for p in self.projects.values()],
         }
 
-    # covers all syncing to and from the planner file
-    # filename is a string specifying the file, with extension
-    # action is a string specifying the type of stream- like the built-in open()
-    # can be 'r' for read, or 'w' for write
-    def __sync_filestream(self, filename: str, action: str) -> dict | None:
-
-        if (open_param := action.lower()[0]) not in ("r", "w"):
-            raise KeyError("Use 'w' or 'r' to write to or read from the file")
-
-        valid_extensions = {".toml": getmodule(toml), ".json": getmodule(json)}
-
-        if (
-            not (file_extension_match := re.search(r"\..*?$", filename))
-            or file_extension_match[0] not in valid_extensions
-        ):
-            raise FileNotFoundError(
-                "Unknown file extension for file '{}'\n Valid exensions are: {}".format(
-                    filename, ", ".join(valid_extensions.keys())
-                )
-            )
-
-        file_module = valid_extensions[file_extension_match[0]]
-
-        if file_module is None:
-            raise Exception  # TODO be more specific
-
-        with open(filename, open_param) as file_obj:
-            if open_param == "r":
-                in_dict = file_module.load(file_obj)
-                print(in_dict)
-                self.load_from_dict(in_dict)
-
-            else:
-                file_module.dump(self.to_dict(), file_obj)
-
-    def load_from_file(self, filename):
-        self.__sync_filestream(filename, "r")
-
-    def write_to_file(self, filename):
-        self.__sync_filestream(filename, "w")
+    def save_to_json(self, filename: str) -> None:
+        with open(filename, "w") as output_file:
+            json.dump(self.to_dict(), output_file, indent=4)
 
     def new_project(self, project_name: str, project_id: str) -> None:
         self.projects[project_id] = Project(project_name, project_id)
