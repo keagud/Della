@@ -18,9 +18,6 @@ from dateparse import Date_Formats
 
 class Task:
 
-
-
-
     def __init__(
         self,
         content: str = "",
