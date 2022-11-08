@@ -231,11 +231,11 @@ def get_interval(input_str: str) -> Timedelta:
 def get_date_match(input_str: str) -> re.Match[str]:
 
     matches: list[re.Match[str] | None] = [
-        re.match(d, input_str) for d in absolute_date_patterns
+        re.search(d, input_str) for d in absolute_date_patterns
     ]
 
     if not any(matches):
-        raise ValueError("'{}' did not match against any known date patterns")
+        raise ValueError("'{}' did not match against any known date patterns".format(input_str))
 
     return [m for m in matches if m][0]
 
