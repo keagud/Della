@@ -70,18 +70,18 @@ class Project:
         project_dict: dict = {},
     ):
 
-        if project_dict.keys():
-            self.load_from_dict(project_dict)
-            return
+        self.tasks: list[Task] = []
+        self.subprojects: dict[str, Project] = {}
 
         self.project_id = project_id
         self.desc = desc
 
-        self.tasks: list[Task] = []
-        self.subprojects: dict[str, Project]
+        if project_dict.keys():
+            self.load_from_dict(project_dict)
+            return
 
     def to_dict(self) -> dict:
-        return {
+       return {
             "project_id": self.project_id,
             "desc": self.desc,
             "tasks": [t.to_dict() for t in self.tasks],
@@ -96,6 +96,10 @@ class Project:
         self.project_id = d["project_id"]
         self.desc = d["desc"]
         self.tasks = [Task(task_dict=t) for t in d["tasks"]]
+        self.subprojects = {
+            sub_id: Project(project_id=None, project_dict=sub_val)
+            for sub_id, sub_val in d["subprojects"].items()
+        }
 
         return self
 
@@ -209,10 +213,12 @@ class Planner:
     def write_to_file(self, filename=None):
         self.__sync_filestream(filename=filename, action="w")
 
+
+    #TODO simplify the API for inherited projects
     def new_project(
         self, project_id: str, project_desc: str = "", parent: Project | None = None
     ) -> None:
-        self.projects[project_id] = Project(project_name, project_id)
+        self.projects[project_id] = Project(project_id, desc=project_desc)
 
 
 def make_planner(user: str | None = None, filename: str | None = None):

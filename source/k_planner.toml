@@ -1,10 +1,11 @@
 owner_id = "k"
 
-[projects.prog]
-name = "programming"
-project_id = "prog"
-[[projects.prog.tasks]]
+[projects.programming]
+project_id = "programming"
+desc = ""
+[[projects.programming.tasks]]
 content = "finish testing"
 due_date = ""
 repeat = "0"
 
+[projects.programming.subprojects]
