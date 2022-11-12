@@ -65,30 +65,36 @@ class Task:
 class Project:
     def __init__(
         self,
-        name: str | None = None,
-        project_id: str | None = None,
-        project_dict: dict | None = None,
+        project_id: str | None,
+        desc: str = "",
+        project_dict: dict = {},
     ):
 
-        if project_dict is not None:
+        if project_dict.keys():
             self.load_from_dict(project_dict)
             return
 
-        self.name = name
         self.project_id = project_id
+        self.desc = desc
+
         self.tasks: list[Task] = []
+        self.subprojects: dict[str, Project]
 
     def to_dict(self) -> dict:
         return {
-            "name": self.name,
             "project_id": self.project_id,
+            "desc": self.desc,
             "tasks": [t.to_dict() for t in self.tasks],
+            "subprojects": {
+                sub_id: sub_val.to_dict()
+                for sub_id, sub_val in self.subprojects.items()
+            },
         }
 
     def load_from_dict(self, d: dict):
 
-        self.name = d["name"]
         self.project_id = d["project_id"]
+        self.desc = d["desc"]
         self.tasks = [Task(task_dict=t) for t in d["tasks"]]
 
         return self
@@ -101,6 +107,9 @@ class Project:
     ):
 
         self.tasks.append(Task(task_content, task_due, repeat))
+
+    def new_subproject(self, new_id, new_desc=""):
+        self.subprojects[new_id] = Project(project_id=new_id, desc=new_desc)
 
     # TODO why does this not print
     def print_tasks(self):
@@ -131,7 +140,6 @@ class Planner:
         else:
             self.projects = {}
 
-        
         self.owner_id: str = owner_id
 
     def load_from_dict(self, d: dict) -> None:
@@ -144,7 +152,8 @@ class Planner:
         projects_dict = d["projects"]
 
         self.projects = {
-            p["project_id"]: Project(project_dict=p) for p in projects_dict.values()
+            p["project_id"]: Project(project_id=None, project_dict=p)
+            for p in projects_dict.values()
         }
 
     def to_dict(self) -> dict:
@@ -157,13 +166,14 @@ class Planner:
     # filename is a string specifying the file, with extension
     # action is a string specifying the type of stream- like the built-in open()
     # can be 'r' for read, or 'w' for write
-    def __sync_filestream(self, filename: str|None = None, action: str = "r") -> dict | None:
+    def __sync_filestream(
+        self, filename: str | None = None, action: str = "r"
+    ) -> dict | None:
 
         if (open_param := action.lower()[0]) not in ("r", "w"):
             raise KeyError("Use 'w' or 'r' to write to or read from the file")
 
         valid_extensions = {".toml": getmodule(toml), ".json": getmodule(json)}
-
 
         if filename is None:
             if (filename := self.file) is None:
@@ -199,16 +209,16 @@ class Planner:
     def write_to_file(self, filename=None):
         self.__sync_filestream(filename=filename, action="w")
 
-    def new_project(self, project_name: str, project_id: str) -> None:
+    def new_project(
+        self, project_id: str, project_desc: str = "", parent: Project | None = None
+    ) -> None:
         self.projects[project_id] = Project(project_name, project_id)
 
 
-def make_planner(
-    user: str | None = None, filename: str | None = None
-):
+def make_planner(user: str | None = None, filename: str | None = None):
 
     user_name = os.environ["USER"] if user is None else user
-    
+
     new_filename = filename if filename is not None else user_name + "_planner.toml"
 
     if os.path.exists(new_filename):
@@ -217,11 +227,10 @@ def make_planner(
     with open(new_filename, "w") as new_file:
         new_file.write("\n")
 
-
     return Planner(owner_id=user_name, file=new_filename)
 
 
-def load_planner_from_file(user: str |None = None, filename: str| None = None):
+def load_planner_from_file(user: str | None = None, filename: str | None = None):
 
     if user is None:
         user = os.environ["USER"]
@@ -229,11 +238,8 @@ def load_planner_from_file(user: str |None = None, filename: str| None = None):
     if filename is None:
         filename = user + "_planner.toml"
 
-
     if not os.path.exists(filename):
         raise FileNotFoundError("Cannot locate file: '{}'".format(filename))
 
     new_planner = Planner(file=filename)
     return new_planner
-
-
