@@ -1,11 +1,17 @@
-import json, datetime, re, os
+import json, datetime, re, os, argparse
 
 from datetime import date, datetime
 from datetime import date as Date
 
 from datetime import timedelta
 
+
 from task_utils import *
+import dateparse
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-p', '--project', help= "The project this task is attached to ")
 
 
 # CONSTANT DEFINITIONS
@@ -21,6 +27,7 @@ DEFAULT_FILENAME = "projects.toml"
 
 COMMAND_KEYWORDS = ["add", "del", "ls"]
 
+#!q -p tactile -d this saturday 
 
 
 #TODO combine with dateparse
