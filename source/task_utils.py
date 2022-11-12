@@ -1,18 +1,17 @@
 from datetime import date
 import dateparse
-import toml,json
+import toml, json
 from inspect import getmodule
 
 import re
 from dateparse import Date_Formats
-
+import os
 
 # TODO
 # allow user to choose format for task due dates (ISO, ANSI etc)
 
 
 class Task:
-
     def __init__(
         self,
         content: str = "",
@@ -39,7 +38,9 @@ class Task:
     def to_dict(self) -> dict:
         return {
             "content": self.content,
-            "due_date": self.due_date.isoformat() if isinstance(self.due_date, date) else "",
+            "due_date": self.due_date.isoformat()
+            if isinstance(self.due_date, date)
+            else "",
             "repeat": str(self.repeat),
         }
 
@@ -122,14 +123,22 @@ class Planner:
 
     def __init__(self, owner_id: str = "", file: str | None = None):
 
+        self.file = file
+
         if file is not None:
             self.load_from_file(file)
 
         else:
-            self.owner_id: str = owner_id
             self.projects = {}
 
+        
+        self.owner_id: str = owner_id
+
     def load_from_dict(self, d: dict) -> None:
+
+        if not d.keys():
+            return
+
         self.owner_id: str = d["owner_id"]
 
         projects_dict = d["projects"]
@@ -148,12 +157,17 @@ class Planner:
     # filename is a string specifying the file, with extension
     # action is a string specifying the type of stream- like the built-in open()
     # can be 'r' for read, or 'w' for write
-    def __sync_filestream(self, filename: str, action: str) -> dict | None:
+    def __sync_filestream(self, filename: str|None = None, action: str = "r") -> dict | None:
 
         if (open_param := action.lower()[0]) not in ("r", "w"):
             raise KeyError("Use 'w' or 'r' to write to or read from the file")
 
         valid_extensions = {".toml": getmodule(toml), ".json": getmodule(json)}
+
+
+        if filename is None:
+            if (filename := self.file) is None:
+                raise FileNotFoundError("No associated file for sync")
 
         if (
             not (file_extension_match := re.search(r"\..*?$", filename))
@@ -179,11 +193,47 @@ class Planner:
             else:
                 file_module.dump(self.to_dict(), file_obj)
 
-    def load_from_file(self, filename):
-        self.__sync_filestream(filename, "r")
+    def load_from_file(self, filename=None):
+        self.__sync_filestream(filename=filename, action="r")
 
-    def write_to_file(self, filename):
-        self.__sync_filestream(filename, "w")
+    def write_to_file(self, filename=None):
+        self.__sync_filestream(filename=filename, action="w")
 
     def new_project(self, project_name: str, project_id: str) -> None:
         self.projects[project_id] = Project(project_name, project_id)
+
+
+def make_planner(
+    user: str | None = None, filename: str | None = None
+):
+
+    user_name = os.environ["USER"] if user is None else user
+    
+    new_filename = filename if filename is not None else user_name + "_planner.toml"
+
+    if os.path.exists(new_filename):
+        raise FileExistsError("'{}' already exists".format(new_filename))
+
+    with open(new_filename, "w") as new_file:
+        new_file.write("\n")
+
+
+    return Planner(owner_id=user_name, file=new_filename)
+
+
+def load_planner_from_file(user: str |None = None, filename: str| None = None):
+
+    if user is None:
+        user = os.environ["USER"]
+
+    if filename is None:
+        filename = user + "_planner.toml"
+
+
+    if not os.path.exists(filename):
+        raise FileNotFoundError("Cannot locate file: '{}'".format(filename))
+
+    new_planner = Planner(file=filename)
+    return new_planner
+
+

@@ -1,0 +1,10 @@
+owner_id = "k"
+
+[projects.prog]
+name = "programming"
+project_id = "prog"
+[[projects.prog.tasks]]
+content = "finish testing"
+due_date = ""
+repeat = "0"
+
