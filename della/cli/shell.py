@@ -6,8 +6,8 @@ from datetime import date as Date
 from datetime import timedelta
 
 
-from task_utils import *
-import dateparse
+from ..task_manager.task_utils import *
+from ..dateparse.dateparse import *
 
 
 parser = argparse.ArgumentParser()

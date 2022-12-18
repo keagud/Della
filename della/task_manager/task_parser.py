@@ -1,6 +1,6 @@
 import argparse
 import json
-from task_utils import *
+from .task_utils import * 
 import sys
 
 commands = "ls rm add".split(" ")

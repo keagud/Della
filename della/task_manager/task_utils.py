@@ -1,10 +1,8 @@
 from datetime import date
-import dateparse
-import toml, json
+import yaml, json
 from inspect import getmodule
 
 import re
-from dateparse import Date_Formats
 import os
 
 # TODO
@@ -177,7 +175,7 @@ class Planner:
         if (open_param := action.lower()[0]) not in ("r", "w"):
             raise KeyError("Use 'w' or 'r' to write to or read from the file")
 
-        valid_extensions = {".toml": getmodule(toml), ".json": getmodule(json)}
+        valid_extensions = {".yaml": getmodule(yaml), ".json": getmodule(json)}
 
         if filename is None:
             if (filename := self.file) is None:
@@ -242,7 +240,7 @@ def load_planner_from_file(user: str | None = None, filename: str | None = None)
         user = os.environ["USER"]
 
     if filename is None:
-        filename = user + "_planner.toml"
+        filename = user + "_planner.yaml"
 
     if not os.path.exists(filename):
         raise FileNotFoundError("Cannot locate file: '{}'".format(filename))
