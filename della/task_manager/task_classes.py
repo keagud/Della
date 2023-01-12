@@ -7,6 +7,7 @@ from os.path import exists
 
 from typing import Any
 from typing import Callable
+from typing import TextIO
 from collections import namedtuple
 
 import yaml
@@ -100,12 +101,12 @@ class TaskNode:
     def change_date(self, new_date: date):
         self.due_date = new_date
 
-    def to_dict(self, depth: int = 0) -> dict[str, Any]:
+    def to_dict(self, depth: int = -1) -> dict[str, Any]:
 
-        node_dict = {
+        node_dict: dict[str, str | list[dict]] = {
             "parent": self.parent.content if self.parent is not None else "",
             "content": self.content,
-            "due_date": self.due_date.isoformat if self.due_date is not None else "",
+            "due_date": self.due_date.isoformat() if self.due_date is not None else "",
         }
 
         if depth != 0 and self.subnodes:
@@ -113,6 +114,22 @@ class TaskNode:
             node_dict["subnodes"] = [c.to_dict(depth=depth - 1) for c in self.subnodes]
 
         return node_dict
+
+    def serialize(
+        self, fstream: TextIO | None = None, target_format: str = "yaml"
+    ) -> str:
+
+        if fstream is not None and not fstream.writable():
+            raise IOError("Cannot write to stream")
+
+        target_format = target_format.lower().strip()
+
+        if target_format not in self.filetype_handlers:
+            raise ValueError(f"'{target_format}' is not a valid serialization target")
+
+        serializer = self.filetype_handlers[target_format]
+
+        return serializer.dump(self.to_dict(depth=-1), fstream)
 
     def __iter__(self):
         return ((n) for n in self.subnodes)
