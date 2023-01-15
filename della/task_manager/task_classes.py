@@ -33,6 +33,9 @@ class TaskNode:
         self.due_date = due_date
         self.parent = parent
 
+        if parent is not None:
+            parent.add_subnode(self)
+
         self.subnodes: list[TaskNode] = []
 
     @classmethod
@@ -129,7 +132,9 @@ class TaskNode:
 
         serializer = self.filetype_handlers[target_format]
 
-        return serializer.dump(self.to_dict(depth=-1), fstream)
+        return serializer.dump(
+            {k: v + "\n" for k, v in self.to_dict(depth=-1)}, fstream
+        )
 
     def __iter__(self):
         return ((n) for n in self.subnodes)
