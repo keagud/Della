@@ -1,0 +1,8 @@
+parent = ""
+content = "some test content"
+due_date = ""
+[[subnodes]]
+parent = ""
+content = "Subtask"
+due_date = ""
+

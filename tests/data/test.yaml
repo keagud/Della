@@ -1,0 +1,7 @@
+content: some test content
+due_date: ''
+parent: ''
+subnodes:
+- content: Subtask
+  due_date: ''
+  parent: some test content

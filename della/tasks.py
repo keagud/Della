@@ -5,10 +5,13 @@ from os import PathLike
 from os.path import splitext
 from os.path import exists
 
+from pathlib import Path
+
 from typing import Any
 from typing import Callable
 from typing import TextIO
 from collections import namedtuple
+from functools import partial
 
 import yaml
 import toml
@@ -21,7 +24,7 @@ MarkupHandler = namedtuple("MarkupHandler", ["load", "dump"])
 class TaskNode:
 
     filetype_handlers: dict[str, MarkupHandler] = {
-        "yaml": MarkupHandler(yaml.load, yaml.dump),
+        "yaml": MarkupHandler(partial(yaml.load, Loader = yaml.Loader), partial(yaml.dump, default_flow_style=False, indent=4)),
         "toml": MarkupHandler(toml.load, toml.dump),
         "json": MarkupHandler(json.load, json.dump),
     }
@@ -63,7 +66,10 @@ class TaskNode:
         return new_node
 
     @classmethod
-    def init_from_file(cls, filepath: PathLike) -> TaskNode:  # type: ignore
+    def init_from_file(cls, filepath: PathLike| str) -> TaskNode:  
+
+        if isinstance(filepath, str):
+            filepath = Path(filepath)
 
         if not exists(filepath):
             raise FileNotFoundError
@@ -80,6 +86,11 @@ class TaskNode:
             )
 
         format_handler = cls.filetype_handlers[file_ext]
+
+        with open(filepath, 'r') as infile:
+            data_dict = format_handler.load(infile)
+
+        return cls.from_dict(data_dict)
 
     def detatch_from_parent(self):
         if self.parent is not None:
@@ -133,7 +144,7 @@ class TaskNode:
         serializer = self.filetype_handlers[target_format]
 
         return serializer.dump(
-            {k: v + "\n" for k, v in self.to_dict(depth=-1)}, fstream
+            self.to_dict(depth=-1), fstream
         )
 
     def __iter__(self):
