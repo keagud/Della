@@ -36,8 +36,13 @@ class TaskNode:
         self.due_date = due_date
         self.parent = parent
 
+        self.is_root:bool = False
+
         if parent is not None:
             parent.add_subnode(self)
+
+        else:
+            self.is_root = True
 
         self.subnodes: list[TaskNode] = []
 
