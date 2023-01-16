@@ -24,19 +24,28 @@ MarkupHandler = namedtuple("MarkupHandler", ["load", "dump"])
 class TaskNode:
 
     filetype_handlers: dict[str, MarkupHandler] = {
-        "yaml": MarkupHandler(partial(yaml.load, Loader = yaml.Loader), partial(yaml.dump, default_flow_style=False, indent=4)),
+        "yaml": MarkupHandler(
+            partial(yaml.load, Loader=yaml.Loader),
+            partial(yaml.dump, default_flow_style=False, indent=4),
+        ),
         "toml": MarkupHandler(toml.load, toml.dump),
         "json": MarkupHandler(json.load, json.dump),
     }
 
     def __init__(
-        self, content: str, parent: TaskNode | None, due_date: date | None = None
+        self,
+        content: str,
+        parent: TaskNode | None,
+        due_date: date | None = None,
+        unique_id: str | None = None,
     ) -> None:
         self.content = content
         self.due_date = due_date
         self.parent = parent
 
-        self.is_root:bool = False
+        self.unique_id = unique_id
+
+        self.is_root: bool = False
 
         if parent is not None:
             parent.add_subnode(self)
@@ -59,6 +68,8 @@ class TaskNode:
             else None
         )
 
+        node_unique_id: str | None = init_dict.get("unique_id")
+
         new_node = TaskNode(
             content=node_content, parent=node_parent, due_date=node_due_date
         )
@@ -71,7 +82,7 @@ class TaskNode:
         return new_node
 
     @classmethod
-    def init_from_file(cls, filepath: PathLike| str) -> TaskNode:  
+    def init_from_file(cls, filepath: PathLike | str) -> TaskNode:
 
         if isinstance(filepath, str):
             filepath = Path(filepath)
@@ -92,7 +103,7 @@ class TaskNode:
 
         format_handler = cls.filetype_handlers[file_ext]
 
-        with open(filepath, 'r') as infile:
+        with open(filepath, "r") as infile:
             data_dict = format_handler.load(infile)
 
         return cls.from_dict(data_dict)
@@ -126,7 +137,11 @@ class TaskNode:
             "parent": self.parent.content if self.parent is not None else "",
             "content": self.content,
             "due_date": self.due_date.isoformat() if self.due_date is not None else "",
+
         }
+
+        if self.unique_id is not None:
+            node_dict['unique_id'] = self.unique_id
 
         if depth != 0 and self.subnodes:
 
@@ -148,9 +163,7 @@ class TaskNode:
 
         serializer = self.filetype_handlers[target_format]
 
-        return serializer.dump(
-            self.to_dict(depth=-1), fstream
-        )
+        return serializer.dump(self.to_dict(depth=-1), fstream)
 
     def __iter__(self):
         return ((n) for n in self.subnodes)
