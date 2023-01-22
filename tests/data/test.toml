@@ -1,5 +1,5 @@
 parent = ""
-content = "some test content"
+content = "this is the root node"
 due_date = ""
 [[subnodes]]
 parent = ""

@@ -11,7 +11,7 @@ from typing import Type
 from typing import Any
 
 
-from tasks import TaskNode
+from .tasks import TaskNode
 from dateparse import DateParser, dateparse
 from dateparse.dateparse import DateInfoTuple
 
