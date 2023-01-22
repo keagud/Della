@@ -43,7 +43,7 @@ class TaskNode:
         self.due_date = due_date
         self.parent = parent
 
-        self.unique_id = unique_id
+        self._uid = unique_id
 
         self.is_root: bool = False
 
@@ -108,6 +108,31 @@ class TaskNode:
 
         return cls.from_dict(data_dict)
 
+    @property
+    def unique_id(self):
+        return self._uid
+
+    @unique_id.setter
+    def unique_id(self, value: str):
+        self._uid = value
+
+    @property
+    def full_path(self) -> list[TaskNode]:
+
+        node: TaskNode | None = self
+
+        pathlist: list[TaskNode] = []
+        while node is not None:
+            pathlist.append(node)
+            node = node.parent
+
+        pathlist.reverse()
+        return pathlist
+
+    @property
+    def full_path_str(self) -> str:
+        return "/".join((n.content for n in self.full_path))
+
     def detatch_from_parent(self):
         if self.parent is not None:
             self.parent.subnodes.remove(self)
@@ -137,11 +162,10 @@ class TaskNode:
             "parent": self.parent.content if self.parent is not None else "",
             "content": self.content,
             "due_date": self.due_date.isoformat() if self.due_date is not None else "",
-
         }
 
-        if self.unique_id is not None:
-            node_dict['unique_id'] = self.unique_id
+        if self._uid is not None:
+            node_dict["unique_id"] = self._uid
 
         if depth != 0 and self.subnodes:
 

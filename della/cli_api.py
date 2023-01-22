@@ -5,13 +5,15 @@ from pathlib import Path
 from datetime import date
 from collections import namedtuple
 from copy import copy
+import re
 
 from typing import Type
 from typing import Any
 
 
 from tasks import TaskNode
-from dateparse import DateParser
+from dateparse import DateParser, dateparse
+from dateparse.dateparse import DateInfoTuple
 
 CommandList = namedtuple("CommandList", "delete finish move list")
 
@@ -41,6 +43,8 @@ class TaskManager:
         self.root_node: TaskNode = self.load_from_file(filepath)
         self.task_file_path = filepath
         self.current_node = self.root_node
+
+        self.working_path = ["/"]
 
         self.unique_ids: dict[str, TaskNode] = {}
 
@@ -80,42 +84,123 @@ class TaskManager:
         with open(target_file, "w") as outfile:
             self.root_node.serialize(outfile, target_format=serialize_format)
 
+    #FINDER METHODS
+    #for getting the target node of an action from user input
+
+    def extract_path(self, input_str: str, from_end: bool = False) -> str | None:
+        """
+        Extract the segment of the input string that represents a path to a task.
+        (Either an @id or /path/to/task, or @combo/of/the/two)
+        If not is present, returns None
+        """
+
+        tokens: list[str] = re.split(r"\s+", input_str)
+
+        if from_end:
+            tokens.reverse()
+
+        return next(
+            (word for word in tokens if word.startswith("@") or "/" in word), None
+        )
+
+    def parse_relative_path(
+        self, input_str: str, base_node: TaskNode | None = None
+    ) -> TaskNode | None:
+        """Get the node pointed to by a path relative to the given node, or current active node"""
+
+        path_content = input_str.split("/")
+
+        if base_node is None:
+            base_node = self.current_node
+
+        iter_node: TaskNode | None = base_node
+
+        for path_loc in path_content[1:]:
+            iter_node = next(
+                (
+                    n
+                    for n in iter_node.subnodes
+                    if n.content.lower() == path_loc.lower()
+                ),
+                None,
+            )
+
+            if iter_node is None:
+                break
+
+        return iter_node
+
+    def parse_absolute_path(self, input_str: str) -> TaskNode | None:
+        """Get the node pointed to by an absolute path (starting from the root node)"""
+        return self.parse_relative_path(input_str, base_node=self.root_node)
+
+    def parse_uid_path(self, input_str: str) -> TaskNode | None:
+        """Get the node pointed to a path relative to an @id, or None if not found"""
+
+        path_content = input_str.split("/")
+        path_start = path_content[0]
+        path_remainder_str = "/".join(path_content[1:])
+
+        clean_id = re.sub(r"^@", "", path_start).lower()
+        if not clean_id in self.unique_ids:
+            return None
+
+        base_node = self.unique_ids[clean_id]
+
+        return self.parse_relative_path(path_remainder_str, base_node=base_node)
+
+    def get_action_target(self, input_str: str) -> TaskNode:
+
+        target_path = self.extract_path(input_str)
+
+        if target_path is None:
+            return self.current_node
+
+        if target_path.startswith("@"):
+            target = self.parse_uid_path(target_path)
+
+        else:
+
+            target = (
+                match
+                if (match := self.parse_absolute_path(input_str)) is not None
+                else self.parse_relative_path(input_str)
+            )
+
+        if target is None:
+            raise ValueError("Cannot resolve action target for '{input_str}'")
+
+        return target
+
     def add_from_input(self, input_str: str):
         """main interface function to add a task at the current node"""
-        # TODO
+        operation_root = self.get_action_target(input_str)
 
-    def get_node_from_name(self, input_str: str) -> TaskNode:  # type: ignore
+        # TODO update dateparse api
+        task_date_info: DateInfoTuple | None = self.date_parser.get_last_info(input_str)
 
-        path_tree: list[str] = input_str.split("/")
+        task_date: date | None = None
+        if task_date_info is not None:
+            start, end = task_date_info.start, task_date_info.end
+            input_str = input_str[start:end]
+            task_date = task_date_info.date
 
-        path_tree.reverse()
+        return TaskNode(input_str, operation_root, due_date=task_date)
 
-        for i, location in enumerate(path_tree):
-            if location in self.unique_ids:
-                return self.unique_ids[location]
+    # NODE ACTIONS
+    #these methods all target a node
+        
+    def set_uid(self, new_id: str, node: TaskNode | None = None):
+        if node is None:
+            node = self.current_node
 
-    def change_active_node(self, node: TaskNode | str):
-        """set the current node to the given one, or the one pointed to by the given id"""
+        new_id = new_id.lower()
 
-        target_node: Any = node
+        if new_id in self.unique_ids:
+            conficting_node = self.unique_ids[new_id]
+            raise KeyError(
+                f"The unique identifier '{new_id}' is already associated with '{conficting_node.full_path_str}'"
+            )
 
-        if isinstance(node, str):
-            target_node = self.unique_ids.get(node, None)
+        self.unique_id = new_id
 
-        if not isinstance(target_node, TaskNode):
-            raise Exception("No node with that ID exists")
-
-        self.current_node = target_node
-
-    def new_subnode(self, content: str, due_date: date | None = None):
-        pass
-
-    def delete_node(self, node: TaskNode):
-        pass
-
-    def mark_node_complete(self, node: TaskNode):
-        pass
-
-    def display_nodes(self, depth: int = -1, from_root: bool = True):
-        """Print all nodes to the given depth"""
-        pass

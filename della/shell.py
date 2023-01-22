@@ -25,14 +25,18 @@ class Shell:
         signal(SIGINT, self._interrupt)
         self.session = PromptSession(prompt_str)
 
+
+        self.filepath = filepath
+        self.task_manager = TaskManager(filepath)
+
     def __enter__(self):
         return self
 
     def write_to_file(self):
-        pass
+        self.task_manager.write_to_file(self.filepath)
 
     def load_from_file(self):
-        pass
+        self.task_manager.load_from_file(self.filepath)
 
     def _interrupt(self, signal_received, frame):
 
