@@ -46,14 +46,13 @@ class Shell:
         exit(0)
 
     def get_input(self) -> str:
-
-        try:
             return self.session.prompt()
 
-        except Exception:
-            pass
 
-        return "s"
+    def input_loop(self):
+        while True:
+            self.get_input()
+
 
     def __exit__(self, exit_type, exit_value, extit_tb, sep="\n"):
         pass

@@ -44,7 +44,6 @@ class TaskManager:
         self.task_file_path = filepath
         self.current_node = self.root_node
 
-        self.working_path = ["/"]
 
         self.unique_ids: dict[str, TaskNode] = {}
 
@@ -84,8 +83,8 @@ class TaskManager:
         with open(target_file, "w") as outfile:
             self.root_node.serialize(outfile, target_format=serialize_format)
 
-    #FINDER METHODS
-    #for getting the target node of an action from user input
+    # FINDER METHODS
+    # for getting the target node of an action from user input
 
     def extract_path(self, input_str: str, from_end: bool = False) -> str | None:
         """
@@ -188,8 +187,8 @@ class TaskManager:
         return TaskNode(input_str, operation_root, due_date=task_date)
 
     # NODE ACTIONS
-    #these methods all target a node
-        
+    # these methods all target a node
+
     def set_uid(self, new_id: str, node: TaskNode | None = None):
         if node is None:
             node = self.current_node
@@ -204,3 +203,30 @@ class TaskManager:
 
         self.unique_id = new_id
 
+    def add_subnode(self, node: TaskNode, subnode_args: dict[str, Any]):
+        subnode_content: str = subnode_args["content"]
+        subnode_date: date | None = subnode_args.get("unique_id", None)
+        subnode_uid: str | None = subnode_args.get("unique_id", None)
+
+        return TaskNode(subnode_content, node, subnode_date, subnode_uid)
+
+    def mark_complete(self, node: TaskNode):
+        # TODO
+        pass
+
+    def delete_node(self, node: TaskNode):
+
+        if node.parent is None:
+            raise Exception("Cannot delete the root project!")
+
+        if node.subnodes:
+            # TODO warn before deleting a node with subnodes
+            pass
+
+        node.detatch_from_parent()
+
+    def move_node(self, node: TaskNode, new_parent: TaskNode):
+        node.change_parent(new_parent)
+
+    def set_active(self, node: TaskNode):
+        self.current_node = node
