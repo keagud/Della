@@ -28,7 +28,12 @@ class Shell:
         )
 
         if not self.filepath.exists():
-            os.makedirs(self.filepath)
+            self.filepath.touch()
+            self.task_root_node = TaskNode("", None)
+
+        else:
+            self.task_root_node = TaskNode.init_from_file(self.filepath).root_node
+
 
         self.date_parser = DateParser()
 
@@ -46,7 +51,6 @@ class Shell:
         signal(SIGINT, self._interrupt)
         self.session = PromptSession(prompt_str)
 
-        self.task_root_node = TaskNode.init_from_file(self.filepath).root_node
 
     @property
     def current_node(self):
@@ -220,5 +224,3 @@ class Shell:
         pass
 
 
-with Shell("~/Code") as s:
-    pass
