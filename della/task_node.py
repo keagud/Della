@@ -74,7 +74,7 @@ class TaskNode:
         return new_node
 
     @classmethod
-    def init_from_file(cls, filepath: PathLike | str) -> TaskNode:
+    def init_from_file(cls, filepath: PathLike | str) -> TaskNode | None:
 
         if isinstance(filepath, str):
             filepath = Path(filepath)
@@ -89,6 +89,9 @@ class TaskNode:
         with open(filepath, "r") as infile:
             data_dict = toml.load(infile)
 
+        if not data_dict:
+            return None
+
         loaded_root = cls.from_dict(data_dict)
         TaskNode._root_node = loaded_root
         return loaded_root
@@ -100,6 +103,10 @@ class TaskNode:
     @unique_id.setter
     def unique_id(self, value: str):
         self._uid = value
+
+    @property
+    def uids_index(self):
+        return TaskNode._unique_ids
 
     @property
     def current_node(self) -> TaskNode:

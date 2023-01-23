@@ -29,11 +29,12 @@ class Shell:
 
         if not self.filepath.exists():
             self.filepath.touch()
-            self.task_root_node = TaskNode("", None)
 
-        else:
-            self.task_root_node = TaskNode.init_from_file(self.filepath).root_node
+        initial_node: TaskNode | None = TaskNode.init_from_file(self.filepath)
 
+        self.task_root_node = (
+            initial_node.root_node if initial_node is not None else TaskNode("", None)
+        )
 
         self.date_parser = DateParser()
 
@@ -51,10 +52,9 @@ class Shell:
         signal(SIGINT, self._interrupt)
         self.session = PromptSession(prompt_str)
 
-
     @property
     def current_node(self):
-        return TaskNode.current_node
+        return self.task_root_node.current_node
 
     def extract_path(self, input_str: str, from_end: bool = False) -> str | None:
         """
@@ -85,7 +85,7 @@ class Shell:
         path_content = input_str.split("/")
 
         if base_node is None:
-            base_node = TaskNode._current_node
+            base_node = self.task_root_node.current_node
 
         iter_node: TaskNode | None = base_node
 
@@ -111,7 +111,7 @@ class Shell:
     def parse_uid_path(self, input_str: str) -> TaskNode | None:
         """Get the node pointed to a path relative to an @id, or None if not found"""
 
-        unique_id_index = TaskNode._unique_ids
+        unique_id_index = self.task_root_node.uids_index
         path_content = input_str.split("/")
         path_start = path_content[0]
         path_remainder_str = "/".join(path_content[1:])
@@ -129,7 +129,7 @@ class Shell:
         target_path = self.extract_path(input_str)
 
         if target_path is None:
-            return TaskNode._current_node
+            return self.task_root_node.current_node
 
         if target_path.startswith("@"):
             target = self.parse_uid_path(target_path)
@@ -222,5 +222,3 @@ class Shell:
 
     def __exit__(self, exit_type, exit_value, extit_tb, sep="\n"):
         pass
-
-
