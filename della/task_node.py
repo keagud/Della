@@ -8,15 +8,11 @@ from os.path import exists
 from pathlib import Path
 
 from typing import Any
-from typing import Callable
 from typing import TextIO
-from collections import namedtuple
-from functools import partial
 
 import toml
 
 
-MarkupHandler = namedtuple("MarkupHandler", ["load", "dump"])
 
 
 class TaskNode:
