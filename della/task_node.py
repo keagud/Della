@@ -102,7 +102,7 @@ class TaskNode:
         self._uid = value
 
     @property
-    def current_node(self):
+    def current_node(self)->TaskNode:
         return TaskNode._current_node
 
     @current_node.setter
@@ -112,10 +112,6 @@ class TaskNode:
     @property
     def root_node(self):
         return TaskNode._root_node
-
-    @root_node.setter
-    def root_node(self, new_node: TaskNode):
-        TaskNode._root_node = new_node
 
     @property
     def full_path(self) -> list[TaskNode]:

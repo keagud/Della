@@ -1,6 +1,8 @@
 import re
+import os
 from datetime import date
 from os import PathLike
+from pathlib import Path
 from signal import signal
 from signal import SIGINT
 
@@ -13,13 +15,22 @@ from dateparse import DateParser
 from dateparse.dateparse import DateInfoTuple
 
 from .task_node import TaskNode
-from .task_manager import TaskManager
 
 
-class InputParser:
-    def __init__(self, manager: TaskManager):
-        self.manager: TaskManager = manager
-        self.date_parser: DateParser = manager.date_parser
+class Shell:
+
+    default_filepath = Path("~/.local/tasks.toml").expanduser()
+
+    def __init__(self, filepath: str | PathLike | None = None, prompt_str: str = "@>"):
+
+        self.filepath: Path = (
+            Path(filepath) if filepath is not None else self.default_filepath
+        )
+
+        if not self.filepath.exists():
+            os.makedirs(self.filepath)
+
+        self.date_parser = DateParser()
 
         self.command_keywords = {
             "move": ["mv", "move"],
@@ -28,6 +39,18 @@ class InputParser:
             "complete": ["done"],
             "edit": ["edit"],
         }
+        # associate the interrupt signal (e.g. ctrl-c) with the _interrupt method
+        # this means ctrl-c interrupts can trigger save to file
+        # and aren't caught as exceptions
+
+        signal(SIGINT, self._interrupt)
+        self.session = PromptSession(prompt_str)
+
+        self.task_root_node = TaskNode.init_from_file(self.filepath).root_node
+
+    @property
+    def current_node(self):
+        return TaskNode.current_node
 
     def extract_path(self, input_str: str, from_end: bool = False) -> str | None:
         """
@@ -79,7 +102,7 @@ class InputParser:
 
     def parse_absolute_path(self, input_str: str) -> TaskNode | None:
         """Get the node pointed to by an absolute path (starting from the root node)"""
-        return self.parse_relative_path(input_str, base_node=self.manager.root_node)
+        return self.parse_relative_path(input_str, base_node=self.task_root_node)
 
     def parse_uid_path(self, input_str: str) -> TaskNode | None:
         """Get the node pointed to a path relative to an @id, or None if not found"""
@@ -97,7 +120,6 @@ class InputParser:
 
         return self.parse_relative_path(path_remainder_str, base_node=base_node)
 
-    # NODE ACTIONS
     def get_action_target(self, input_str: str) -> TaskNode:
 
         target_path = self.extract_path(input_str)
@@ -139,7 +161,7 @@ class InputParser:
         target = (
             match
             if (match := self.get_action_target(input_str)) is not None
-            else self.manager.current_node
+            else self.task_root_node.current_node
         )
 
         command_key: str = "add"
@@ -172,28 +194,13 @@ class InputParser:
             case "edit":
                 pass
 
-
-class Shell:
-    def __init__(self, filepath: PathLike | str, prompt_str: str = "@>") -> None:
-
-        # associate the interrupt signal (e.g. ctrl-c) with the _interrupt method
-        # this means ctrl-c interrupts can trigger save to file
-        # and aren't caught as exceptions
-
-        signal(SIGINT, self._interrupt)
-        self.session = PromptSession(prompt_str)
-
-        self.filepath = filepath
-        self.task_manager = TaskManager(filepath)
-
     def __enter__(self):
         return self
 
     def write_to_file(self):
-        self.task_manager.write_to_file(self.filepath)
 
-    def load_from_file(self):
-        self.task_manager.load_from_file(self.filepath)
+        with open(self.filepath, "w") as outfile:
+            self.task_root_node.serialize(outfile)
 
     def _interrupt(self, signal_received, frame):
 
