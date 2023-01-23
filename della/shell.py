@@ -149,11 +149,11 @@ class Shell:
         return TaskNode(input_str, parent, due_date=task_date)
 
     def delete_node(self, target: Node, warn: bool = True):
-
+        """Deletes the target node, optionally prompting to confirm"""
         if not isinstance(target, TaskNode):
             raise Exception("Invalid target")
 
-        if target.subnodes and warn:
+        if warn:
             reply = prompt(
                 f"{target.path_str} has {len(target.subnodes)} sub-items.\nReally delete? (y/n): "
             ).lower()
@@ -164,7 +164,7 @@ class Shell:
         target.delete()
 
     def list_nodes(self, target: Node, depth: int = -1):
-        pass
+        target.display(max_depth=depth)
 
     def command(self, input_str: str):
 
@@ -195,15 +195,14 @@ class Shell:
             case "delete":
                 self.delete_node(target)
             case "list":
-                # TODO implement
                 self.list_nodes(target)
                 pass
             case "complete":
                 # TODO
-                pass
+                raise NotImplementedError
             case "edit":
                 # TODO
-                pass
+                raise NotImplementedError
 
     def __enter__(self):
         return self
