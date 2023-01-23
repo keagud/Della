@@ -14,27 +14,16 @@ from prompt_toolkit import PromptSession
 from dateparse import DateParser
 from dateparse.dateparse import DateInfoTuple
 
-from .task_node import TaskNode
+from .node import Node, TaskNode, RootNode
 
 
 class Shell:
-
-    default_filepath = Path("~/.local/tasks.toml").expanduser()
-
     def __init__(self, filepath: str | PathLike | None = None, prompt_str: str = "@>"):
 
-        self.filepath: Path = (
-            Path(filepath) if filepath is not None else self.default_filepath
-        )
+        self.root: RootNode = RootNode(filepath)
 
-        if not self.filepath.exists():
-            self.filepath.touch()
-
-        initial_node: TaskNode | None = TaskNode.init_from_file(self.filepath)
-
-        self.task_root_node = (
-            initial_node.root_node if initial_node is not None else TaskNode("", None)
-        )
+        self.filepath: PathLike = self.root.filepath
+        self.current_node: Node = self.root
 
         self.date_parser = DateParser()
 
@@ -51,10 +40,6 @@ class Shell:
 
         signal(SIGINT, self._interrupt)
         self.session = PromptSession(prompt_str)
-
-    @property
-    def current_node(self):
-        return self.task_root_node.current_node
 
     def extract_path(self, input_str: str, from_end: bool = False) -> str | None:
         """
@@ -78,16 +63,19 @@ class Shell:
         )
 
     def parse_relative_path(
-        self, input_str: str, base_node: TaskNode | None = None
+        self, input_str: str, base_node: Node | None = None
     ) -> TaskNode | None:
         """Get the node pointed to by a path relative to the given node, or current active node"""
 
         path_content = input_str.split("/")
 
         if base_node is None:
-            base_node = self.task_root_node.current_node
+            base_node = self.current_node
 
-        iter_node: TaskNode | None = base_node
+        iter_node: Node | None = base_node
+
+        if base_node == self.root:
+            pass
 
         for path_loc in path_content[1:]:
             iter_node = next(
@@ -102,16 +90,17 @@ class Shell:
             if iter_node is None:
                 break
 
-        return iter_node
+        if not isinstance(iter_node, Node):
+            return iter_node
 
     def parse_absolute_path(self, input_str: str) -> TaskNode | None:
         """Get the node pointed to by an absolute path (starting from the root node)"""
-        return self.parse_relative_path(input_str, base_node=self.task_root_node)
+        return self.parse_relative_path(input_str, base_node=self.root)
 
     def parse_uid_path(self, input_str: str) -> TaskNode | None:
         """Get the node pointed to a path relative to an @id, or None if not found"""
 
-        unique_id_index = self.task_root_node.uids_index
+        unique_id_index = self.root.uids_index
         path_content = input_str.split("/")
         path_start = path_content[0]
         path_remainder_str = "/".join(path_content[1:])
@@ -124,12 +113,12 @@ class Shell:
 
         return self.parse_relative_path(path_remainder_str, base_node=base_node)
 
-    def get_action_target(self, input_str: str) -> TaskNode:
+    def get_action_target(self, input_str: str) -> Node:
 
         target_path = self.extract_path(input_str)
 
         if target_path is None:
-            return self.task_root_node.current_node
+            return self.current_node
 
         if target_path.startswith("@"):
             target = self.parse_uid_path(target_path)
@@ -165,7 +154,7 @@ class Shell:
         target = (
             match
             if (match := self.get_action_target(input_str)) is not None
-            else self.task_root_node.current_node
+            else self.current_node
         )
 
         command_key: str = "add"
@@ -185,6 +174,8 @@ class Shell:
 
         match command_key:
             case "add":
+                if not isinstance(target, TaskNode):
+                    raise Exception
                 self._add_from_input(input_remainder, target)
             case "move":
                 # TODO
@@ -204,7 +195,7 @@ class Shell:
     def write_to_file(self):
 
         with open(self.filepath, "w") as outfile:
-            self.task_root_node.serialize(outfile)
+            self.root.serialize(outfile)
 
     def _interrupt(self, signal_received, frame):
 
