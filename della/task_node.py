@@ -102,7 +102,7 @@ class TaskNode:
         self._uid = value
 
     @property
-    def current_node(self)->TaskNode:
+    def current_node(self) -> TaskNode:
         return TaskNode._current_node
 
     @current_node.setter
@@ -180,11 +180,22 @@ class TaskNode:
     def __iter__(self):
         return ((n) for n in self.subnodes)
 
-    def __str__(self) -> str:  # type: ignore
+    def __str__(self) -> str:
         date_str = (
             f" [{self.due_date.isoformat()}]" if self.due_date is not None else ""
         )
         return self.content + date_str
 
-    def display(self, depth: int = 0):
-        pass
+    def display(self, max_depth: int = -1, indent: str = " ", bullet: str = ""):
+        """Return a formatted string with this node's info, recursively"""
+
+        def recursive_display(n: TaskNode, depth: int):
+            lines = [(indent * depth) + bullet + str(n)]
+
+            if max_depth < 0 or max_depth < max_depth:
+                for s in n.subnodes:
+                    lines.extend(recursive_display(s, depth + 1))
+
+            return lines
+
+        return "\n".join(recursive_display(self, 0))
