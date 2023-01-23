@@ -13,25 +13,13 @@ from typing import TextIO
 from collections import namedtuple
 from functools import partial
 
-import yaml
 import toml
-import json
 
 
 MarkupHandler = namedtuple("MarkupHandler", ["load", "dump"])
 
 
 class TaskNode:
-
-    filetype_handlers: dict[str, MarkupHandler] = {
-        "yaml": MarkupHandler(
-            partial(yaml.load, Loader=yaml.Loader),
-            partial(yaml.dump, default_flow_style=False, indent=4),
-        ),
-        "toml": MarkupHandler(toml.load, toml.dump),
-        "json": MarkupHandler(json.load, json.dump),
-    }
-
     def __init__(
         self,
         content: str,
@@ -94,17 +82,8 @@ class TaskNode:
 
         file_ext: str = file_ext.lower().strip()[1:]
 
-        if not file_ext or not file_ext in cls.filetype_handlers:
-            raise ValueError(
-                f"Cannot initialize from file '{filepath}':"
-                "extension '{file_ext}' is not in allowed extensions"
-                "\n\t({', '.join(cls.filetype_handlers)})"
-            )
-
-        format_handler = cls.filetype_handlers[file_ext]
-
         with open(filepath, "r") as infile:
-            data_dict = format_handler.load(infile)
+            data_dict = toml.load(infile)
 
         return cls.from_dict(data_dict)
 
@@ -173,21 +152,12 @@ class TaskNode:
 
         return node_dict
 
-    def serialize(
-        self, fstream: TextIO | None = None, target_format: str = "yaml"
-    ) -> str:
+    def serialize(self, fstream: TextIO) -> str:
 
-        if fstream is not None and not fstream.writable():
+        if not fstream.writable():
             raise IOError("Cannot write to stream")
 
-        target_format = target_format.lower().strip()
-
-        if target_format not in self.filetype_handlers:
-            raise ValueError(f"'{target_format}' is not a valid serialization target")
-
-        serializer = self.filetype_handlers[target_format]
-
-        return serializer.dump(self.to_dict(depth=-1), fstream)
+        return toml.dump(self.to_dict(depth=-1), fstream)
 
     def __iter__(self):
         return ((n) for n in self.subnodes)
