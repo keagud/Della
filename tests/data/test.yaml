@@ -1,7 +1,0 @@
-content: this is the root node
-due_date: ''
-parent: ''
-subnodes:
-- content: Subtask
-  due_date: ''
-  parent: some test content
