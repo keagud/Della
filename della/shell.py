@@ -12,7 +12,7 @@ from prompt_toolkit import PromptSession
 from dateparse import DateParser
 from dateparse.dateparse import DateInfoTuple
 
-from .tasks import TaskNode
+from .task_node import TaskNode
 from .task_manager import TaskManager
 
 
@@ -58,7 +58,7 @@ class InputParser:
         path_content = input_str.split("/")
 
         if base_node is None:
-            base_node = self.manager.current_node
+            base_node = TaskNode._current_node
 
         iter_node: TaskNode | None = base_node
 
@@ -84,15 +84,16 @@ class InputParser:
     def parse_uid_path(self, input_str: str) -> TaskNode | None:
         """Get the node pointed to a path relative to an @id, or None if not found"""
 
+        unique_id_index = TaskNode._unique_ids
         path_content = input_str.split("/")
         path_start = path_content[0]
         path_remainder_str = "/".join(path_content[1:])
 
         clean_id = re.sub(r"^@", "", path_start).lower()
-        if not clean_id in self.manager.unique_ids:
+        if not clean_id in unique_id_index:
             return None
 
-        base_node = self.manager.unique_ids[clean_id]
+        base_node = unique_id_index[clean_id]
 
         return self.parse_relative_path(path_remainder_str, base_node=base_node)
 
@@ -102,7 +103,7 @@ class InputParser:
         target_path = self.extract_path(input_str)
 
         if target_path is None:
-            return self.manager.current_node
+            return TaskNode._current_node
 
         if target_path.startswith("@"):
             target = self.parse_uid_path(target_path)
@@ -170,8 +171,6 @@ class InputParser:
                 pass
             case "edit":
                 pass
- 
-
 
 
 class Shell:
@@ -183,7 +182,6 @@ class Shell:
 
         signal(SIGINT, self._interrupt)
         self.session = PromptSession(prompt_str)
-
 
         self.filepath = filepath
         self.task_manager = TaskManager(filepath)
@@ -205,13 +203,11 @@ class Shell:
         exit(0)
 
     def get_input(self) -> str:
-            return self.session.prompt()
-
+        return self.session.prompt()
 
     def input_loop(self):
         while True:
             self.get_input()
-
 
     def __exit__(self, exit_type, exit_value, extit_tb, sep="\n"):
         pass

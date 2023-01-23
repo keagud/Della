@@ -13,9 +13,12 @@ from typing import TextIO
 import toml
 
 
-
-
 class TaskNode:
+
+    _unique_ids: dict[str, Any] = {}
+    _current_node: TaskNode
+    _root_node: TaskNode
+
     def __init__(
         self,
         content: str,
@@ -27,9 +30,7 @@ class TaskNode:
         self.due_date = due_date
         self.parent = parent
 
-        self._uid = unique_id
-
-        self.is_root: bool = False
+        self._uid: str | None = unique_id
 
         if parent is not None:
             parent.add_subnode(self)
@@ -63,6 +64,13 @@ class TaskNode:
             for subdict in init_dict["subnodes"]:
                 new_node.add_subnode(TaskNode.from_dict(subdict))
 
+        if node_unique_id is not None:
+            if node_unique_id in TaskNode._unique_ids:
+                raise KeyError(f"Duplicate ID: {node_unique_id}")
+
+            new_node._uid = node_unique_id
+            TaskNode._unique_ids[node_unique_id]
+
         return new_node
 
     @classmethod
@@ -81,7 +89,9 @@ class TaskNode:
         with open(filepath, "r") as infile:
             data_dict = toml.load(infile)
 
-        return cls.from_dict(data_dict)
+        loaded_root = cls.from_dict(data_dict)
+        TaskNode._root_node = loaded_root
+        return loaded_root
 
     @property
     def unique_id(self):
@@ -90,6 +100,22 @@ class TaskNode:
     @unique_id.setter
     def unique_id(self, value: str):
         self._uid = value
+
+    @property
+    def current_node(self):
+        return TaskNode._current_node
+
+    @current_node.setter
+    def current_node(self, new_node: TaskNode):
+        TaskNode._current_node = new_node
+
+    @property
+    def root_node(self):
+        return TaskNode._root_node
+
+    @root_node.setter
+    def root_node(self, new_node: TaskNode):
+        TaskNode._root_node = new_node
 
     @property
     def full_path(self) -> list[TaskNode]:

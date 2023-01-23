@@ -10,8 +10,7 @@ import re
 from typing import Type
 from typing import Any
 
-from .input_parser import InputParser
-from .tasks import TaskNode
+from .task_node import TaskNode
 from dateparse import DateParser, dateparse
 from dateparse.dateparse import DateInfoTuple
 
