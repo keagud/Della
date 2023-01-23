@@ -50,6 +50,19 @@ class Node:
     def __iter__(self):
         return ((n) for n in self.subnodes)
 
+    @property
+    def path_str(self) -> str:
+        def path_recurse(n: Node) -> list[str]:
+
+            if isinstance(n, TaskNode):
+                path = [n.content]
+                path.extend(path_recurse(n.parent))
+                return path
+
+            return []
+
+        return "/".join(reversed(path_recurse(self)))
+
     def display(self, max_depth: int = -1, indent: str = " ", bullet: str = ""):
         """Return a formatted string with this node's info, recursively"""
 
@@ -142,6 +155,9 @@ class TaskNode(Node):
     @root.setter
     def root(self, r):
         self._root = r
+
+    def delete(self):
+        self.parent.del_subnode(self)
 
     def __str__(self) -> str:
         date_str = (

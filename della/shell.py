@@ -28,7 +28,6 @@ class Shell:
         self.date_parser = DateParser()
 
         self.command_keywords = {
-            "move": ["mv", "move"],
             "delete": ["del", "rm", "delete"],
             "list": ["list", "ls"],
             "complete": ["done"],
@@ -136,7 +135,7 @@ class Shell:
 
         return target
 
-    def _add_from_input(self, input_str: str, parent: TaskNode):
+    def add_from_input(self, input_str: str, parent: Node):
         """main interface function to add a task at the given node, from user input"""
 
         task_date_info: DateInfoTuple | None = self.date_parser.get_last_info(input_str)
@@ -148,6 +147,24 @@ class Shell:
             task_date = task_date_info.date
 
         return TaskNode(input_str, parent, due_date=task_date)
+
+    def delete_node(self, target: Node, warn: bool = True):
+
+        if not isinstance(target, TaskNode):
+            raise Exception("Invalid target")
+
+        if target.subnodes and warn:
+            reply = prompt(
+                f"{target.path_str} has {len(target.subnodes)} sub-items.\nReally delete? (y/n): "
+            ).lower()
+
+            if not reply.startswith("y"):
+                return None
+
+        target.delete()
+
+    def list_nodes(self, target: Node, depth: int = -1):
+        pass
 
     def command(self, input_str: str):
 
@@ -174,19 +191,18 @@ class Shell:
 
         match command_key:
             case "add":
-                if not isinstance(target, TaskNode):
-                    raise Exception
-                self._add_from_input(input_remainder, target)
-            case "move":
-                # TODO
-                pass
+                self.add_from_input(input_remainder, target)
             case "delete":
-                pass
+                self.delete_node(target)
             case "list":
+                # TODO implement
+                self.list_nodes(target)
                 pass
             case "complete":
+                # TODO
                 pass
             case "edit":
+                # TODO
                 pass
 
     def __enter__(self):
