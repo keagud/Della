@@ -11,11 +11,6 @@ import toml
 
 class Node:
     def __init__(self):
-
-        # DIY virtual constructor
-        if not type(self) in (type(TaskNode), type(RootNode)):
-            raise NotImplementedError
-
         self.subnodes: list[TaskNode] = []
 
     def asdict(self, depth: int = 1):
