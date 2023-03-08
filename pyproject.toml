@@ -25,6 +25,7 @@ packages = [
 python = ">=3.10,<4"
 click = "*"
 dateparse = "^1.0.0"
+toml = "^0.10.2"
 
 [tool.poetry.group.dev.dependencies]
 coverage = "*"

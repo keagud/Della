@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import json
 import types
 from datetime import date as DateType
 from functools import partial
 from pathlib import Path
-from typing import Callable, Optional, TextIO
+from typing import Optional, TextIO
+
+import toml
 
 
 class Task:
@@ -21,7 +22,7 @@ class Task:
         self.due_date = due_date
         self.parent = parent
 
-        self.children = []
+        self.subtasks = []
 
     @property
     def parent(self):
@@ -30,26 +31,12 @@ class Task:
     @parent.setter
     def parent(self, new_parent: Task | None):
         if self._parent is not None:
-            self._parent.children.remove(self)
+            self._parent.subtasks.remove(self)
 
         self._parent = new_parent
 
-    def subtask_func(self):
-        def make_child(*args, **kwargs):
-            t = Task(*args, **kwargs, parent=self)
-            self.children.append(t)
-            return t
-
-        return make_child
-
-    def delete(self, warn_hook: Optional[Callable[[Task], bool]] = None):
-        if warn_hook and not warn_hook(self):
-            return
-
-        self.parent = None
-
-        for child in self.children:
-            child.parent = None
+    def __str__(self):
+        raise NotImplementedError
 
     def _to_dict(self, recurse: bool = True):
         pass
@@ -59,8 +46,8 @@ class Task:
             "due_date": "None" if not self.due_date else self.due_date.isoformat(),
         }
 
-        if recurse and self.children:
-            save_dict["subtasks"] = [c._to_dict(recurse=True) for c in self.children]
+        if recurse and self.subtasks:
+            save_dict["subtasks"] = [c._to_dict(recurse=True) for c in self.subtasks]
 
         return save_dict
 
@@ -68,7 +55,7 @@ class Task:
 class TaskManager:
     def __init__(
         self,
-        save_file: str | Path = "~/.config/della/tasks.json",
+        save_file: str | Path,
         show_days_until: bool = True,
         date_format: str = "%a, %b %d",
     ):
@@ -77,7 +64,7 @@ class TaskManager:
 
         self.save_file_path = save_file
 
-        self.root_task = Task("(root)", None)
+        self.root_task = Task("All Tasks", None)
 
     @property
     def save_file_path(self):
@@ -102,11 +89,11 @@ class TaskManager:
 
                 return f"{display_date} (in {days_until_delta.days} days)"
 
-            child_summary = (
-                " " if not task.children else f"| {len(task.children)} subtasks"
+            subtask_summary = (
+                " " if not task.subtasks else f"| {len(task.subtasks)} subtasks"
             )
 
-            return f"{task.content}{child_summary}{make_display_date()}".strip()
+            return f"{task.content}{subtask_summary}{make_display_date()}".strip()
 
         target_task.__str__ = types.MethodType(task_str, target_task)
 
@@ -120,7 +107,7 @@ class TaskManager:
 
     def serialize(self, fp: TextIO):
         tasks_dicts = self.root_task._to_dict(recurse=True)
-        json.dump(tasks_dicts["subtasks"], fp)
+        toml.dump(tasks_dicts, fp)
 
         return tasks_dicts
 
@@ -132,9 +119,9 @@ class TaskManager:
 
         if not fp:
             with open(new_manager.save_file_path, "r") as load_file:
-                data_dict = json.load(load_file)
+                data_dict = toml.load(load_file)
         else:
-            data_dict = json.load(fp)
+            data_dict = toml.load(fp)
 
         def dict_init(parent_task: Task, task_dict: dict):
             new_content = task_dict.get("content", "")
