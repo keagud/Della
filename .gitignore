@@ -111,4 +111,6 @@ ENV/
 #bumpversion
 *bumpversion.cfg
 
+_test.py
+
 .editorconfig

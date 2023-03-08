@@ -36,6 +36,7 @@ pytest = ">=7.2.0"
 pre-commit = "*"
 black = "*"
 ipython = "^8.11.0"
+ipdb = "^0.13.11"
 
 [tool.poetry.scripts]
 della = 'della.cli:main'

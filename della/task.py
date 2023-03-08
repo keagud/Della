@@ -5,6 +5,7 @@ from __future__ import annotations
 import types
 from datetime import date as DateType
 from functools import partial
+from itertools import chain
 from pathlib import Path
 from typing import Optional, TextIO
 
@@ -20,9 +21,31 @@ class Task:
     ) -> None:
         self.content = content
         self.due_date = due_date
+        self._parent = None
         self.parent = parent
 
         self.subtasks = []
+
+    @classmethod
+    def init_from_dict(cls, task_parent: Task, task_dict: dict):
+        new_content = task_dict["content"]
+
+        try:
+            new_due_date = DateType.fromisoformat(task_dict.get("due_date", ""))
+        except ValueError:
+            new_due_date = None
+
+        new_task = Task(new_content, task_parent, new_due_date)
+
+        [
+            Task.init_from_dict(new_task, d)
+            for d in task_dict.get("subtasks", [])
+            if isinstance(d, dict)
+        ]
+
+        return new_task
+
+    pass
 
     @property
     def parent(self):
@@ -33,14 +56,23 @@ class Task:
         if self._parent is not None:
             self._parent.subtasks.remove(self)
 
+        if new_parent is not None:
+            new_parent.subtasks.append(self)
+
         self._parent = new_parent
 
+    def __iter__(self):
+        yield self
+        if self.subtasks:
+            yield from chain.from_iterable(i for i in (s for s in self.subtasks))
+
     def __str__(self):
-        raise NotImplementedError
+        return self.content
+
+    def _define_subtasks(self, s: list[Task]):
+        self.subtasks = s
 
     def _to_dict(self, recurse: bool = True):
-        pass
-
         save_dict: dict[str, str | list] = {
             "content": self.content,
             "due_date": "None" if not self.due_date else self.due_date.isoformat(),
@@ -74,6 +106,9 @@ class TaskManager:
     def save_file_path(self, new_path: str | Path):
         self._save_file_path = Path(new_path).expanduser().resolve()
 
+    def __iter__(self):
+        yield from (i for i in self.root_task if i is not self.root_task)
+
     def _set_task_format(self, target_task: Task):
         def task_str(task: Task):
             def make_display_date():
@@ -98,7 +133,10 @@ class TaskManager:
         target_task.__str__ = types.MethodType(task_str, target_task)
 
     def add_task(
-        self, content: str, parent: Optional[Task], due_date: Optional[DateType] = None
+        self,
+        content: str,
+        parent: Optional[Task] = None,
+        due_date: Optional[DateType] = None,
     ):
         if parent is None:
             parent = self.root_task
@@ -114,8 +152,7 @@ class TaskManager:
     @classmethod
     def deserialize(cls, filepath: str | Path, fp: Optional[TextIO] = None, **kwargs):
         new_manager = TaskManager(save_file=filepath, **kwargs)
-
-        data_dict: dict[str, str | list] = {}
+        data_dict: dict[str, str | list[dict]] = {}
 
         if not fp:
             with open(new_manager.save_file_path, "r") as load_file:
@@ -123,27 +160,11 @@ class TaskManager:
         else:
             data_dict = toml.load(fp)
 
-        def dict_init(parent_task: Task, task_dict: dict):
-            new_content = task_dict.get("content", "")
+        tasks = [v for v in data_dict.get("subtasks", []) if isinstance(v, dict)]
+        root_subtasks = list(
+            map(partial(Task.init_from_dict, new_manager.root_task), tasks)
+        )
 
-            try:
-                new_due_date = DateType.fromisoformat(task_dict.get("due_date", ""))
-            except ValueError:
-                new_due_date = None
-
-            new_task = Task(new_content, parent_task, new_due_date)
-
-            if "subtasks" in task_dict.keys():
-                make_subtask = partial(dict_init, parent_task=new_task)
-                map(make_subtask, task_dict["subtasks"])
-
-        root_subtasks = data_dict.get("subtasks", [])
-
-        if isinstance(root_subtasks, str):
-            error_text = f"Error deserializing {filepath}:"
-            "expected subtasks as a list, not a string"
-            raise ValueError(error_text)
-
-        map(partial(dict_init, parent_task=new_manager.root_task), root_subtasks)
+        new_manager.root_task._define_subtasks(root_subtasks)
 
         return new_manager
