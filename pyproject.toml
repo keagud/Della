@@ -26,6 +26,7 @@ python = ">=3.10,<4"
 click = "*"
 dateparse = "^1.0.0"
 toml = "^0.10.2"
+textual = {extras = ["dev"], version = "^0.13.0"}
 
 [tool.poetry.group.dev.dependencies]
 coverage = "*"
