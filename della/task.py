@@ -49,8 +49,8 @@ class Task:
 
     @cached_property
     def full_path(self) -> list[Task]:
-        if not self.parent:
-            return [self]
+        if self.parent is None:
+            return []
 
         return self.parent.full_path + [self]
 
@@ -64,6 +64,7 @@ class Task:
 
     @parent.setter
     def parent(self, new_parent: Task | None):
+        #   import ipdb; ipdb.set_trace()
         if self._parent is not None:
             self._parent.subtasks.remove(self)
 
@@ -75,6 +76,7 @@ class Task:
     def __iter__(self):
         yield self
         if self.subtasks:
+            #  import ipdb; ipdb.set_trace()
             yield from chain.from_iterable(i for i in (s for s in self.subtasks))
 
     def __str__(self):
@@ -111,7 +113,7 @@ class TaskManager:
         self.save_file_path = save_file
 
         self.root_task = Task("All Tasks", None)
-
+        print("//// CREATING MANAGER //////")
         self.tasks_index: dict[str, Task] = {}
 
     @property
@@ -158,6 +160,13 @@ class TaskManager:
             parent = self.root_task
 
         new_task = Task(content, parent, due_date)
+
+        new_task.parent = parent
+
+        self._set_task_format(new_task)
+
+        self.tasks_index[new_task.path_str] = new_task
+
         self.reindex()
         return new_task
 
@@ -193,12 +202,16 @@ class TaskManager:
         return new_manager
 
     def reindex(self):
-        self.tasks_index = {}
+        #        import ipdb; ipdb.set_trace()
 
+        self.tasks_index.clear()
         for task in self:
+            print(task)
             path_str: str = task.path_str
             if path_str in self.tasks_index and self.tasks_index[path_str] != task:
-                raise KeyError
+                print(self.tasks_index[path_str])
+                #               raise KeyError(f"{path_str} alread present")
+                continue
             self.tasks_index[path_str] = task
 
     def search(self, search_path: str):
