@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional, TextIO
 
 import toml
+from slugify import slugify
 
 
 class Task:
@@ -23,7 +24,7 @@ class Task:
         self.due_date = due_date
         self._parent = None
         self.parent = parent
-
+        self.slug = slugify(self.content)
         self.subtasks = []
 
     @classmethod
@@ -45,7 +46,12 @@ class Task:
 
         return new_task
 
-    pass
+    @property
+    def full_path(self) -> list[Task]:
+        if not self.parent:
+            return [self]
+
+        return self.parent.full_path + [self]
 
     @property
     def parent(self):
@@ -87,7 +93,7 @@ class Task:
 class TaskManager:
     def __init__(
         self,
-        save_file: str | Path,
+        save_file: str | Path = "~/.config/della/tasks.toml",
         show_days_until: bool = True,
         date_format: str = "%a, %b %d",
     ):
