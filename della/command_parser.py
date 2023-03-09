@@ -26,6 +26,14 @@ class CommandParser:
 
         self.date_parser = DateParser(named_days=named_days)
 
+    def validate_parent_id(self, parent: str):
+        search_path = parent.split("/")
+
+        for segment in search_path:
+            pass
+
+        pass
+
     def parse_input(self, input_str: str):
         date_match = self.date_parser.get_last(input_str)
 

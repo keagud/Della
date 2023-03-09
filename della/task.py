@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import types
+from collections import deque
 from datetime import date as DateType
-from functools import partial
+from functools import cached_property, partial
 from itertools import chain
 from pathlib import Path
-from typing import Optional, TextIO
+from typing import Callable, Optional, TextIO
 
 import toml
 from slugify import slugify
@@ -46,12 +47,16 @@ class Task:
 
         return new_task
 
-    @property
+    @cached_property
     def full_path(self) -> list[Task]:
         if not self.parent:
             return [self]
 
         return self.parent.full_path + [self]
+
+    @cached_property
+    def path_str(self) -> str:
+        return "/".join(s.slug for s in self.full_path)
 
     @property
     def parent(self):
@@ -74,6 +79,9 @@ class Task:
 
     def __str__(self):
         return self.content
+
+    def __repr__(self):
+        return f"{self.content}|{self.due_date}"
 
     def _define_subtasks(self, s: list[Task]):
         self.subtasks = s
@@ -103,6 +111,8 @@ class TaskManager:
         self.save_file_path = save_file
 
         self.root_task = Task("All Tasks", None)
+
+        self.tasks_index: dict[str, Task] = {}
 
     @property
     def save_file_path(self):
@@ -147,7 +157,13 @@ class TaskManager:
         if parent is None:
             parent = self.root_task
 
-        return Task(content, parent, due_date)
+        new_task = Task(content, parent, due_date)
+        self.reindex()
+        return new_task
+
+    def __repr__(self):
+        self.reindex()
+        return self.tasks_index.__repr__()
 
     def serialize(self, fp: TextIO):
         tasks_dicts = self.root_task._to_dict(recurse=True)
@@ -173,4 +189,44 @@ class TaskManager:
 
         new_manager.root_task._define_subtasks(root_subtasks)
 
+        new_manager.reindex()
         return new_manager
+
+    def reindex(self):
+        self.tasks_index = {}
+
+        for task in self:
+            path_str: str = task.path_str
+            if path_str in self.tasks_index and self.tasks_index[path_str] != task:
+                raise KeyError
+            self.tasks_index[path_str] = task
+
+    def search(self, search_path: str):
+        if search_path in self.tasks_index:
+            return [self.tasks_index[search_path]]
+
+        search_queue = deque(self.root_task.subtasks)
+        found: list[Task] = []
+
+        # i love you, bfs
+        while search_queue:
+            t = search_queue.pop()
+            search_queue.extendleft(t.subtasks)
+
+            this_task_path = t.path_str
+
+            if this_task_path.endswith(search_path):
+                found.append(t)
+
+        return found
+
+    def delete_task(
+        self, task: Task, warn_func: Optional[Callable[[Task], bool]] = None
+    ) -> bool:
+        if warn_func and not warn_func(task):
+            return False
+
+        task.parent = None
+        self.reindex()
+
+        return True
