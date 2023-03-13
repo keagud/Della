@@ -50,6 +50,9 @@ class CommandParser:
     def list(self):
         raise NotImplementedError
 
+    def prompt(self, *args, **kwargs):
+        raise NotImplementedError
+
     def __enter__(self, *args, **kwargs):
         raise NotImplementedError
 
@@ -106,7 +109,7 @@ class CommandParser:
 
             parent_id = first_slug_match.strip("#")
 
-            print(remainder_tokens)
+        #    print(remainder_tokens)
         return ParseResult(
             input_str, " ".join(remainder_tokens), command, date_match, parent_id
         )

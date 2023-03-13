@@ -5,6 +5,7 @@ from signal import SIGINT, signal
 from typing import Optional
 
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
+from prompt_toolkit.completion import NestedCompleter
 
 from .command_parser import CommandParser
 from .task import Task
@@ -68,7 +69,6 @@ class CLI_Parser(CommandParser):
         named_days: Optional[dict[str, str]] = None,
         prompt_display: str = "> ",
     ) -> None:
-        self.session = PromptSession(prompt_display)
         super().__init__(
             filepath,
             named_days,
@@ -77,10 +77,35 @@ class CLI_Parser(CommandParser):
             alert_func=cli_alert,
         )
 
+        self.session = PromptSession(
+            prompt_display,
+            complete_while_typing=True,
+            completer=self.update_completions(),
+        )
         self.indent = " "
 
         color_options = ["red", "orange", "yellow", "green", "blue", "purple"]
         self.colors_iter = cycle(reversed(color_options))
+
+    def make_completions(self, task_node: Optional[Task] = None):
+        if task_node is None:
+            task_node = self.manager.root_task
+        d = {}
+
+        for task in task_node.subtasks:
+            content = None
+
+            if task.subtasks:
+                content = self.make_completions(task)
+
+            d[task.slug] = content
+
+        return d
+
+    def update_completions(self):
+        completions = self.make_completions()
+        self.completer = NestedCompleter.from_nested_dict(completions)
+        return self.completer
 
     def format_subtasks(self, t, color=None, level=0):
         if color is None:
@@ -127,7 +152,7 @@ class CLI_Parser(CommandParser):
         print_formatted_text(HTML(formatted))
 
     def prompt(self):
-        self.from_prompt(self.session.prompt())
+        self.from_prompt(self.session.prompt(completer=self.update_completions()))
 
     def __enter__(self, *args, **kwargs):
         signal(SIGINT, self._sigint_handler)
