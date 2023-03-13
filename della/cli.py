@@ -13,5 +13,9 @@ def main():
     return 0
 
 
+def start_prompt():
+    pass
+
+
 if __name__ == "__main__":
     sys.exit(main())  # pragma: no cover

@@ -1,5 +1,10 @@
 import sys
+from itertools import cycle
+from pathlib import Path
 from signal import SIGINT, signal
+from typing import Optional
+
+from prompt_toolkit import HTML, PromptSession, print_formatted_text
 
 from .command_parser import CommandParser
 from .task import Task
@@ -56,24 +61,81 @@ def command_exit(self: CommandParser, *args, **kwargs):
     print(f"Saved to {self.manager.save_file_path}")
 
 
-def make_cli(filepath: str = "~/.local/della/tasks.toml"):
-    class CLI_Parser(CommandParser):
-        def __enter__(self, *args, **kwargs):
-            signal(SIGINT, self._sigint_handler)
-            return cli_enter(self, *args, **kwargs)
+class CLI_Parser(CommandParser):
+    def __init__(
+        self,
+        filepath: str | Path = "~/.local/tasks.toml",
+        named_days: Optional[dict[str, str]] = None,
+        prompt_display: str = "> ",
+    ) -> None:
+        self.session = PromptSession(prompt_display)
+        super().__init__(
+            filepath,
+            named_days,
+            resolve_func=cli_resolve,
+            warn_func=cli_warn,
+            alert_func=cli_alert,
+        )
 
-        def _sigint_handler(self, signal_received, frame):
-            self.__exit__(None, None, None)
-            sys.exit(0)
+        self.indent = " "
 
-        def __exit__(self, *args, **kwargs):
-            return command_exit(self, *args, **kwargs)
+        color_options = ["red", "orange", "yellow", "green", "blue", "purple"]
+        self.colors_iter = cycle(reversed(color_options))
 
-    new_parser = CLI_Parser(
-        filepath=filepath,
-        resolve_func=cli_resolve,
-        warn_func=cli_warn,
-        alert_func=cli_alert,
-    )
+    def format_subtasks(self, t, color=None, level=0):
+        if color is None:
+            color = next(self.colors_iter)
 
-    return new_parser
+        ls = []
+        for index, subtask in enumerate(t.subtasks, start=1):
+            content, subtask_summary, display_date = subtask.decompose()
+            formatted = (
+                "{front_indent}<{color}>{}.{content:<8s}"
+                "{sub_summary:<8s}{date:>8s}</{color}>".format(
+                    index,
+                    front_indent=self.indent * level,
+                    color=color,
+                    content=content,
+                    date=display_date,
+                    sub_summary=subtask_summary,
+                )
+            )
+
+            ls.append(formatted)
+
+            if subtask.subtasks:
+                next_color = next(self.colors_iter)
+                ls.extend(
+                    self.format_subtasks(subtask, color=next_color, level=level + 1)
+                )
+
+        return ls
+
+    def format_tasks(
+        self,
+        root_task: Optional[Task] = None,
+    ) -> list[str]:
+        if root_task is None:
+            root_task = self.manager.root_task
+
+        if not root_task.subtasks:
+            return ["No Tasks"]
+        return self.format_subtasks(root_task)
+
+    def list(self, root_task: Task | None = None):
+        formatted = "\n".join(self.format_tasks(root_task=root_task))
+        print_formatted_text(HTML(formatted))
+
+    def prompt(self):
+        self.from_prompt(self.session.prompt())
+
+    def __enter__(self, *args, **kwargs):
+        signal(SIGINT, self._sigint_handler)
+        return cli_enter(self, *args, **kwargs)
+
+    def _sigint_handler(self, signal_received, frame):
+        self.__exit__(None, None, None)
+        sys.exit(0)
+
+    def __exit__(self, *args, **kwargs):
+        return command_exit(self, *args, **kwargs)

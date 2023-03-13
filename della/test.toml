@@ -1,6 +1,0 @@
-content = "All Tasks"
-due_date = "None"
-[[subtasks]]
-content = "a subtask"
-due_date = "None"
-

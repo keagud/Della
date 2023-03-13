@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
-from pprint import pprint
 from typing import Callable, NamedTuple, Optional
 
 from dateparse import DateParser
@@ -46,6 +46,9 @@ class CommandParser:
         self.manager = TaskManager.deserialize(filepath)
 
         self.task_env: Task = self.manager.root_task
+
+    def list(self):
+        raise NotImplementedError
 
     def __enter__(self, *args, **kwargs):
         raise NotImplementedError
@@ -111,7 +114,7 @@ class CommandParser:
     def resolve_input(self, parse_result: ParseResult):
         _, content, command, date_result, parent_id = parse_result
         task_parent = self.task_search(parent_id)
-        pprint(parse_result)
+        logging.debug(parse_result)
         if task_parent is None:
             task_parent = self.task_env
 
@@ -136,7 +139,7 @@ class CommandParser:
             return None
 
         if command.lower() in ("ls", "list", "show", "l"):
-            self.alert_func(str(self.manager))
+            self.list()
 
             return None
 

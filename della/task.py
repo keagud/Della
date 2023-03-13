@@ -82,6 +82,9 @@ class Task:
             #  import ipdb; ipdb.set_trace()
             yield from chain.from_iterable(i for i in (s for s in self.subtasks))
 
+    def decompose(self):
+        raise NotImplementedError
+
     def __str__(self):
         return self.content
 
@@ -106,7 +109,7 @@ class Task:
 class TaskManager:
     def __init__(
         self,
-        save_file: str | Path = "~/.config/della/tasks.toml",
+        save_file: str | Path = "~/.local/della/tasks.toml",
         show_days_until: bool = True,
         date_format: str = "%a, %b %d",
     ):
@@ -116,7 +119,6 @@ class TaskManager:
         self.save_file_path = save_file
 
         self.root_task = Task("All Tasks", None)
-        print("//// CREATING MANAGER //////")
         self.tasks_index: dict[str, Task] = {}
 
     @property
@@ -131,7 +133,7 @@ class TaskManager:
         yield from (i for i in self.root_task if i is not self.root_task)
 
     def _set_task_format(self, target_task: Task):
-        def task_str(task: Task):
+        def task_decompose(task: Task):
             def make_display_date():
                 if task.due_date is None:
                     return ""
@@ -146,11 +148,15 @@ class TaskManager:
                 return f"{display_date} (in {days_until_delta.days} days)"
 
             subtask_summary = (
-                " " if not task.subtasks else f"| {len(task.subtasks)} subtasks"
+                "" if not task.subtasks else f"{len(task.subtasks)} subtasks"
             )
 
-            return f"{task.content}{subtask_summary}{make_display_date()}".strip()
+            return (task.content, subtask_summary, make_display_date())
 
+        def task_str(task: Task):
+            return " | ".join([t for t in task_decompose(task) if t])
+
+        target_task.decompose = types.MethodType(task_decompose, target_task)
         target_task.__str__ = types.MethodType(task_str, target_task)
 
     def add_task(
@@ -209,13 +215,13 @@ class TaskManager:
 
         self.tasks_index.clear()
         for task in self:
-            print(task)
             path_str: str = task.path_str
             if path_str in self.tasks_index and self.tasks_index[path_str] != task:
-                print(self.tasks_index[path_str])
-                #               raise KeyError(f"{path_str} alread present")
-                continue
+                self.delete_task(task)
+                raise KeyError(f"{path_str} already present")
             self.tasks_index[path_str] = task
+
+            self._set_task_format(task)
 
     def search(self, search_path: str):
         if search_path in self.tasks_index:
