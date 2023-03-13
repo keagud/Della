@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from pprint import pprint
 from typing import Callable, NamedTuple, Optional
 
 from dateparse import DateParser
@@ -36,14 +37,15 @@ class CommandParser:
         else:
             self.alert_func = alert_func
 
-        self.manager = TaskManager.deserialize(filepath)
-
-        self.task_env: Task = self.manager.root_task
-        self.filepath = self.manager.save_file_path
+        self.filepath = Path(filepath).expanduser().resolve()
 
         if not self.filepath.exists():
             os.makedirs(self.filepath.parent, exist_ok=True)
             self.filepath.touch(exist_ok=True)
+
+        self.manager = TaskManager.deserialize(filepath)
+
+        self.task_env: Task = self.manager.root_task
 
     def __enter__(self, *args, **kwargs):
         raise NotImplementedError
@@ -63,9 +65,8 @@ class CommandParser:
     ):
         if search_str is None:
             return None
-        import ipdb
 
-        ipdb.set_trace()
+        # ipdb.set_trace()
         search_results = self.manager.search(search_str)
 
         if not search_results:
@@ -110,7 +111,7 @@ class CommandParser:
     def resolve_input(self, parse_result: ParseResult):
         _, content, command, date_result, parent_id = parse_result
         task_parent = self.task_search(parent_id)
-
+        pprint(parse_result)
         if task_parent is None:
             task_parent = self.task_env
 

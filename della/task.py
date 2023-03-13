@@ -21,6 +21,9 @@ class Task:
         parent: Optional[Task],
         due_date: Optional[DateType] = None,
     ) -> None:
+        if not content:
+            raise ValueError("A task cannot be empty")
+
         self.content = content
         self.due_date = due_date
         self._parent = None
