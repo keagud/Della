@@ -1,30 +1,35 @@
 import re
 from typing import Iterable
 
-from prompt_toolkit import prompt
-from prompt_toolkit.completion import CompleteEvent, Completer, Completion
+from prompt_toolkit.completion import (
+    CompleteEvent,
+    Completer,
+    Completion,
+    DummyCompleter,
+)
 from prompt_toolkit.document import Document
 
-pat = re.compile(r"[^/\s#]+")
+from .task import Task
+
+task_path_pattern = re.compile(r"#[^\s]*$")
 
 
 class TaskCompleter(Completer):
-    def __init__(self) -> None:
+    def __init__(self, complete_base: Task) -> None:
         super().__init__()
+
+        self.dummy = DummyCompleter()
+        self.complete_base: Task = complete_base
+
+    def dummy_complete(self, *args, **kwargs):
+        return self.dummy.get_completions(*args, **kwargs)
 
     def get_completions(
         self, document: Document, complete_event: CompleteEvent
     ) -> Iterable[Completion]:
-        input_start, input_end = document.find_boundaries_of_current_word()
+        if not self.complete_base.subtasks:
+            return self.dummy_complete(document, complete_event)
 
-        selection = document.get_word_before_cursor(pattern=pat)
-
-        if selection.endswith("/"):
-            selection = selection[:-1]
-
-        return (Completion(selection) for c in range(10))
-
-
-tc = TaskCompleter()
-
-x = prompt(completer=tc, complete_while_typing=True)
+        if not re.search(task_path_pattern, document.text_before_cursor):
+            return self.dummy_complete(document, complete_event)
+        return (Completion(t.slug) for t in self.complete_base.subtasks)
