@@ -6,7 +6,7 @@ from signal import SIGINT, signal
 from typing import Optional
 
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
-from prompt_toolkit.completion import NestedCompleter
+from prompt_toolkit.completion import FuzzyCompleter, NestedCompleter
 
 from .command_parser import CommandParser
 from .task import Task
@@ -129,8 +129,13 @@ class CLI_Parser(CommandParser):
 
     def update_completions(self):
         completions = self.make_completions()
-        self.completer = NestedCompleter.from_nested_dict(completions)
+        nested_completer = NestedCompleter.from_nested_dict(completions)
+
+        self.completer = FuzzyCompleter(nested_completer)
         return self.completer
+
+    def completions_filter(self):
+        return False
 
     def format_subtasks(
         self,
