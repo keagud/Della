@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "della"
-version = "0.1.0"
+version = "0.2.0"
 homepage = "https://github.com/keagud/della"
 description = "Top-level package for Della."
 authors = ["Keaton Guderian <keagud@protonmail.com>"]
@@ -28,7 +28,7 @@ toml = "^0.10.2"
 textual = {extras = ["dev"], version = "^0.13.0"}
 python-slugify = "^8.0.1"
 prompt-toolkit = "^3.0.38"
-click = "^8.1.3"
+argparse = "^1.4.0"
 
 [tool.poetry.group.dev.dependencies]
 coverage = "*"
@@ -42,7 +42,7 @@ ipython = "^8.11.0"
 ipdb = "^0.13.11"
 
 [tool.poetry.scripts]
-della = 'della.cli:main'
+della = 'della.della:run'
 
 [tool.pyright]
 venvPath = "."
