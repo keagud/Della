@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 
@@ -140,6 +141,9 @@ class CommandParser:
             self.manager.delete_task(target_task, warn_func=self.warn_func)
 
             return None
+
+        if command.lower() in ("q", "quit", "exit"):
+            sys.exit(0)
 
         if command.lower() in ("ls", "list", "show", "l"):
             self.list()

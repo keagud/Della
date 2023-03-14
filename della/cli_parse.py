@@ -1,6 +1,7 @@
 import sys
 from itertools import cycle
 from pathlib import Path
+from shutil import get_terminal_size
 from signal import SIGINT, signal
 from typing import Optional
 
@@ -23,23 +24,36 @@ def cli_alert(message: str) -> None:
     print(message)
 
 
-def cli_warn(t: Task):
-    print(f"Are you sure you want to delete '{t.full_path}'? (y/n)", end="")
+def _color_print(message, color, end="\n"):
+    print_formatted_text(f"<{color}>{message}</{color}>", end=end)
+
+
+def cli_warn(t: Task, color="red"):
+    print_formatted_text(
+        f"<{color}>Are you sure you want to delete '{t.full_path}'? (y/n)</{color}>",
+        end="",
+    )
     if t.subtasks:
-        print(f"\nIt has {len(t.subtasks)} subtasks that will also be deleted", end="")
+        print_formatted_text(
+            f"<{color}>\n"
+            " It has {len(t.subtasks)} subtasks that will also be deleted"
+            "</{color}>",
+            end="",
+        )
 
     user_reply = input(" ")
 
     return user_reply.lower().startswith("y")
 
 
-def cli_resolve(tasks: list[Task]):
-    print(
-        "Multiple matches! Input the number of the target, or anything else to cancel"
+def cli_resolve(tasks: list[Task], color="red"):
+    _color_print(
+        "Multiple matches! Input the number of the target, or anything else to cancel",
+        color,
     )
 
     for i, t in enumerate(tasks, start=1):
-        print(f"{i}. {str(t)}")
+        print(f"{i}. {t.full_path}")
 
     selection = input()
 
@@ -49,7 +63,7 @@ def cli_resolve(tasks: list[Task]):
     selection_int = int(selection) - 1
 
     if not 0 <= selection_int < len(tasks):
-        print("Invalid selection")
+        _color_print("Invalid selection", color)
         return None
 
     return tasks[selection_int]
@@ -67,7 +81,8 @@ class CLI_Parser(CommandParser):
         self,
         filepath: str | Path = "~/.local/tasks.toml",
         named_days: Optional[dict[str, str]] = None,
-        prompt_display: str = "> ",
+        prompt_display: str = "@=> ",
+        prompt_color: str = "skyblue",
     ) -> None:
         super().__init__(
             filepath,
@@ -77,14 +92,16 @@ class CLI_Parser(CommandParser):
             alert_func=cli_alert,
         )
 
+        prompt_display = f"<{prompt_color}>{prompt_display}</{prompt_color}>"
         self.session = PromptSession(
-            prompt_display,
+            HTML(prompt_display),
             complete_while_typing=True,
             completer=self.update_completions(),
         )
         self.indent = " "
 
-        color_options = ["red", "orange", "yellow", "green", "blue", "purple"]
+        color_options = "crimson darkorange gold lawngreen"
+        " turquoise skyblue mediumslateblue violet".split()
         self.colors_iter = cycle(reversed(color_options))
 
     def make_completions(self, task_node: Optional[Task] = None):
@@ -107,32 +124,55 @@ class CLI_Parser(CommandParser):
         self.completer = NestedCompleter.from_nested_dict(completions)
         return self.completer
 
-    def format_subtasks(self, t, color=None, level=0):
+    def format_subtasks(
+        self,
+        t,
+        color=None,
+        level=0,
+        term_width: Optional[int] = None,
+    ):
+        if term_width is None:
+            term_width, _ = get_terminal_size()
+            term_width -= 5
         if color is None:
             color = next(self.colors_iter)
 
         ls = []
+
         for index, subtask in enumerate(t.subtasks, start=1):
+            formatted_line = []
             content, subtask_summary, display_date = subtask.decompose()
-            formatted = (
-                "{front_indent}<{color}>{}.{content:<8s}"
-                "{sub_summary:<8s}{date:>8s}</{color}>".format(
-                    index,
-                    front_indent=self.indent * level,
-                    color=color,
-                    content=content,
-                    date=display_date,
-                    sub_summary=subtask_summary,
+
+            # TODO properly handle line breaks
+
+            left_content = "".join(
+                (
+                    f"{self.indent * level}{index}. ",
+                    content,
+                    f" | {subtask_summary}" if subtask_summary else " ",
                 )
             )
 
-            ls.append(formatted)
+            right_padding = term_width - len(left_content)
+
+            formatted_line.append(f"<{color}>")
+
+            formatted_line.append(left_content)
+
+            if display_date:
+                formatted_line.append(f"{display_date:>{right_padding}}")
+
+            formatted_line.append(f"</{color}>")
+
+            ls.append("".join(formatted_line))
 
             if subtask.subtasks:
-                next_color = next(self.colors_iter)
-                ls.extend(
-                    self.format_subtasks(subtask, color=next_color, level=level + 1)
-                )
+                recurse_args = {
+                    "color": next(self.colors_iter),
+                    "term_width": term_width,
+                    "level": level + 1,
+                }
+                ls.extend(self.format_subtasks(subtask, **recurse_args))
 
         return ls
 
@@ -145,7 +185,8 @@ class CLI_Parser(CommandParser):
 
         if not root_task.subtasks:
             return ["No Tasks"]
-        return self.format_subtasks(root_task)
+
+        return self.format_subtasks(self.manager.root_task)
 
     def list(self, root_task: Task | None = None):
         formatted = "\n".join(self.format_tasks(root_task=root_task))
