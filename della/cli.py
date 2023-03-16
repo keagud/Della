@@ -1,12 +1,19 @@
+import re
 import sys
 from itertools import cycle
 from pathlib import Path
 from shutil import get_terminal_size
 from signal import SIGINT, signal
-from typing import Optional
+from typing import Iterable, Optional
 
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
-from prompt_toolkit.completion import FuzzyCompleter, NestedCompleter
+from prompt_toolkit.completion import (
+    CompleteEvent,
+    Completer,
+    Completion,
+    DummyCompleter,
+)
+from prompt_toolkit.document import Document
 
 from .command_parser import CommandParser
 from .task import Task
@@ -76,6 +83,31 @@ def command_exit(self: CommandParser, *args, **kwargs):
     print(f"Saved to {self.manager.save_file_path}")
 
 
+task_path_pattern = re.compile(r"#[^\s]*$")
+
+
+class TaskCompleter(Completer):
+    def __init__(self, complete_base: Task) -> None:
+        super().__init__()
+
+        self.dummy = DummyCompleter()
+        self.complete_base: Task = complete_base
+
+    def dummy_complete(self, *args, **kwargs):
+        return self.dummy.get_completions(*args, **kwargs)
+
+    def get_completions(
+        self, document: Document, complete_event: CompleteEvent
+    ) -> Iterable[Completion]:
+        if not self.complete_base.subtasks:
+            return self.dummy_complete(document, complete_event)
+
+        if not re.search(task_path_pattern, document.text_before_cursor):
+            return self.dummy_complete(document, complete_event)
+
+        return (Completion(t.slug) for t in self.complete_base.subtasks)
+
+
 class CLI_Parser(CommandParser):
     def __init__(
         self,
@@ -91,6 +123,8 @@ class CLI_Parser(CommandParser):
             warn_func=cli_warn,
             alert_func=cli_alert,
         )
+
+        self.completer = self.update_completions()
 
         prompt_display = f"<{prompt_color}>{prompt_display}</{prompt_color}>"
         self.session = PromptSession(
@@ -128,10 +162,6 @@ class CLI_Parser(CommandParser):
         return d
 
     def update_completions(self):
-        completions = self.make_completions()
-        nested_completer = NestedCompleter.from_nested_dict(completions)
-
-        self.completer = FuzzyCompleter(nested_completer)
         return self.completer
 
     def completions_filter(self):

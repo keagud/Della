@@ -11,7 +11,7 @@ from prompt_toolkit.document import Document
 
 from .task import Task
 
-task_path_pattern = re.compile(r"#[^\s]*$")
+task_path_pattern = re.compile(r"(#)?")
 
 
 class TaskCompleter(Completer):
@@ -20,6 +20,7 @@ class TaskCompleter(Completer):
 
         self.dummy = DummyCompleter()
         self.complete_base: Task = complete_base
+        self.mid_path = False
 
     def dummy_complete(self, *args, **kwargs):
         return self.dummy.get_completions(*args, **kwargs)
@@ -27,9 +28,28 @@ class TaskCompleter(Completer):
     def get_completions(
         self, document: Document, complete_event: CompleteEvent
     ) -> Iterable[Completion]:
-        if not self.complete_base.subtasks:
+        last_char = document.char_before_cursor
+
+        task_base = self.complete_base
+
+        if last_char == "/" and not self.mid_path:
+            task_base = self.complete_base
+
+        if last_char == "#":
+            # autocomplete options are all tasks
+            # except those that would be ambiguous as a base
+            pass
+
+        if not task_base.subtasks:
             return self.dummy_complete(document, complete_event)
 
         if not re.search(task_path_pattern, document.text_before_cursor):
             return self.dummy_complete(document, complete_event)
         return (Completion(t.slug) for t in self.complete_base.subtasks)
+
+
+class SCompleter(Completer):
+    def get_completions(
+        self, document: Document, complete_event: CompleteEvent
+    ) -> Iterable[Completion]:
+        return super().get_completions(document, complete_event)

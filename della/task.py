@@ -120,6 +120,7 @@ class TaskManager:
 
         self.root_task = Task("All Tasks", None)
         self.tasks_index: dict[str, Task] = {}
+        self.active_task = self.root_task
 
     @property
     def save_file_path(self):
@@ -223,11 +224,15 @@ class TaskManager:
 
             self._set_task_format(task)
 
-    def search(self, search_path: str):
+    def search(self, search_path: str, relative: bool = True):
         if search_path in self.tasks_index:
             return [self.tasks_index[search_path]]
 
-        search_queue = deque(self.root_task.subtasks)
+        start_task = self.root_task
+        if relative:
+            start_task = self.active_task
+
+        search_queue = deque(start_task.subtasks)
         found: list[Task] = []
 
         # i love you, bfs
