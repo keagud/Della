@@ -25,30 +25,34 @@ def cli_alert(message: str) -> None:
     print(message)
 
 
-def _color_print(message, color, end="\n"):
-    print_formatted_text(f"<{color}>{message}</{color}>", end=end)
+def color_print(message, color, end="\n"):
+    print_formatted_text(HTML(f"<{color}>{message}</{color}>"), end=end)
 
 
 def cli_warn(t: Task, color="red"):
-    print_formatted_text(
-        f"<{color}>Are you sure you want to delete '{t.full_path}'? (y/n)</{color}>",
-        end="",
+    warn_text = (
+        f"<{color}>Are you sure you want to delete '{t.full_path}'? (y/n) </{color}>"
     )
+
+    color_print(warn_text, "red", end="")
+
     if t.subtasks:
-        print_formatted_text(
-            f"<{color}>\n"
-            " It has {len(t.subtasks)} subtasks that will also be deleted"
-            "</{color}>",
-            end="",
-        )
+        subtask_text = f"\n<{color}> It has {len(t.subtasks)}"
+        " subtasks that will also be deleted </{color}>"
+        color_print(subtask_text, "red", end="")
 
     user_reply = input(" ")
 
-    return user_reply.lower().startswith("y")
+    proceed_delete = user_reply.lower().startswith("y")
+
+    if proceed_delete:
+        color_print(f'Deleted "{t}"', "red")
+
+    return proceed_delete
 
 
 def cli_resolve(tasks: list[Task], color="red"):
-    _color_print(
+    color_print(
         "Multiple matches! Input the number of the target, or anything else to cancel",
         color,
     )
@@ -64,7 +68,7 @@ def cli_resolve(tasks: list[Task], color="red"):
     selection_int = int(selection) - 1
 
     if not 0 <= selection_int < len(tasks):
-        _color_print("Invalid selection", color)
+        color_print("Invalid selection", color)
         return None
 
     return tasks[selection_int]

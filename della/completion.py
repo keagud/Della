@@ -1,7 +1,6 @@
 from collections import deque
 from typing import Any, Iterable, Optional
 
-from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import (
     CompleteEvent,
     Completer,
@@ -210,21 +209,3 @@ class TaskCompleter(Completer):
 
         for match in key_path:
             yield Completion(match, start_position=token_start_pos + 1)
-
-
-if False:
-    compdict = {
-        "a": {"rose": {"by": {"any-other-name": None, "the-sea": None}}},
-        "two": {
-            "birds": {
-                "in": {"the": {"air": None, "trucks": None, "tea": None, "bush": None}},
-                "with": {"one-stone": None},
-            },
-            "trucks": {"on-the-road": None, "having": {"tea": None, "sex": None}},
-        },
-    }
-    # sys.exit()
-    c = TaskCompleter(compdict)
-    ps = PromptSession(">> ", completer=c, complete_while_typing=True)
-    while True:
-        x = ps.prompt()
