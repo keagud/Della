@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import (
@@ -9,6 +9,9 @@ from prompt_toolkit.completion import (
     DummyCompleter,
 )
 from prompt_toolkit.document import Document
+from prompt_toolkit.formatted_text import FormattedText
+
+from .task import Task
 
 
 def null_complete_closure():
@@ -103,8 +106,12 @@ def find_completion_key(k: str, input_dict: dict[str, Any]):
     return None if not matching else matching
 
 
-class TestCompleter(Completer):
-    def __init__(self, completions_dict: dict) -> None:
+class TaskCompleter(Completer):
+    def __init__(
+        self,
+        completions_dict: dict,
+        completions_formatter: Optional[Iterable[str]] = None,
+    ) -> None:
         super().__init__()
         # set by the CLI_parser when the user switches focused tasks
         # with the !set command
@@ -114,24 +121,36 @@ class TestCompleter(Completer):
 
         self.null_complete = null_complete_closure()()
 
-        self.leaves = ["LEAF", "END", "FINAL"]
-        self.nodes = ["divorcing", "wayfarers", "alchemy"]
+    @classmethod
+    def _dict_from_tasks(cls, task_node: Task):
+        d = {}
+
+        for task in task_node.subtasks:
+            content = None
+
+            if task.subtasks:
+                content = cls._dict_from_tasks(task)
+
+            d[task.slug] = content
+
+        return d
 
     @classmethod
-    def from_nested_dict(cls, data: dict):
-        pass
+    def from_tasks(cls, task_root: Task):
+        comp_dict = TaskCompleter._dict_from_tasks(task_root)
+        return TaskCompleter(comp_dict)
 
     def completion_gen(
         self,
         it: Iterable[str],
         start_pos=0,
     ) -> Iterable[Completion]:
-        import ipdb
-
-        ipdb.set_trace()
-
-        for txt in it:
-            yield Completion(txt, start_position=start_pos)
+        return (
+            Completion(
+                txt, start_position=start_pos, display=FormattedText([("#ff0066", txt)])
+            )
+            for txt in it
+        )
 
     def _keysearch(self, search_keys, search_dict=None):
         if search_dict is None:
@@ -160,12 +179,10 @@ class TestCompleter(Completer):
             return self.null_complete
 
         if starts_keyword_base and len(tail) == 1:
-            import ipdb
-
-            ipdb.set_trace()
             uniques = find_unique_keys(self.compdict)
-            x = self.completion_gen(list(uniques))
-            return x
+
+            for c in self.completion_gen(list(uniques)):
+                yield c
 
         task_item_start = document.find_backwards("/")
         task_path_start = document.find_backwards("#")
@@ -174,7 +191,6 @@ class TestCompleter(Completer):
         assert token_start_pos is not None
 
         path_sequence = [t.strip("#") for t in input_tokens[-1].split("/")]
-        #        pprint (path_sequence)
         start_level: dict[str, Any] = self.compdict
 
         if starts_keyword_base:
@@ -198,18 +214,19 @@ class TestCompleter(Completer):
             yield Completion(match, start_position=token_start_pos + 1)
 
 
-compdict = {
-    "a": {"rose": {"by": {"any-other-name": None, "the-sea": None}}},
-    "two": {
-        "birds": {
-            "in": {"the": {"air": None, "trucks": None, "tea": None, "bush": None}},
-            "with": {"one-stone": None},
+if False:
+    compdict = {
+        "a": {"rose": {"by": {"any-other-name": None, "the-sea": None}}},
+        "two": {
+            "birds": {
+                "in": {"the": {"air": None, "trucks": None, "tea": None, "bush": None}},
+                "with": {"one-stone": None},
+            },
+            "trucks": {"on-the-road": None, "having": {"tea": None, "sex": None}},
         },
-        "trucks": {"on-the-road": None, "having": {"tea": None, "sex": None}},
-    },
-}
-# sys.exit()
-c = TestCompleter(compdict)
-ps = PromptSession(">> ", completer=c, complete_while_typing=True)
-while True:
-    x = ps.prompt()
+    }
+    # sys.exit()
+    c = TaskCompleter(compdict)
+    ps = PromptSession(">> ", completer=c, complete_while_typing=True)
+    while True:
+        x = ps.prompt()

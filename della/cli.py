@@ -1,21 +1,15 @@
-import re
 import sys
 from itertools import cycle
 from pathlib import Path
 from shutil import get_terminal_size
 from signal import SIGINT, signal
-from typing import Iterable, Optional
+from typing import Optional
 
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
-from prompt_toolkit.completion import (
-    CompleteEvent,
-    Completer,
-    Completion,
-    DummyCompleter,
-)
-from prompt_toolkit.document import Document
+from prompt_toolkit.completion import FuzzyCompleter
 
 from .command_parser import CommandParser
+from .completion import TaskCompleter
 from .task import Task
 
 
@@ -83,31 +77,6 @@ def command_exit(self: CommandParser, *args, **kwargs):
     print(f"Saved to {self.manager.save_file_path}")
 
 
-task_path_pattern = re.compile(r"#[^\s]*$")
-
-
-class TaskCompleter(Completer):
-    def __init__(self, complete_base: Task) -> None:
-        super().__init__()
-
-        self.dummy = DummyCompleter()
-        self.complete_base: Task = complete_base
-
-    def dummy_complete(self, *args, **kwargs):
-        return self.dummy.get_completions(*args, **kwargs)
-
-    def get_completions(
-        self, document: Document, complete_event: CompleteEvent
-    ) -> Iterable[Completion]:
-        if not self.complete_base.subtasks:
-            return self.dummy_complete(document, complete_event)
-
-        if not re.search(task_path_pattern, document.text_before_cursor):
-            return self.dummy_complete(document, complete_event)
-
-        return (Completion(t.slug) for t in self.complete_base.subtasks)
-
-
 class CLI_Parser(CommandParser):
     def __init__(
         self,
@@ -123,8 +92,6 @@ class CLI_Parser(CommandParser):
             warn_func=cli_warn,
             alert_func=cli_alert,
         )
-
-        self.completer = self.update_completions()
 
         prompt_display = f"<{prompt_color}>{prompt_display}</{prompt_color}>"
         self.session = PromptSession(
@@ -146,26 +113,10 @@ class CLI_Parser(CommandParser):
         ]
         self.colors_iter = cycle(reversed(color_options))
 
-    def make_completions(self, task_node: Optional[Task] = None):
-        if task_node is None:
-            task_node = self.manager.root_task
-        d = {}
-
-        for task in task_node.subtasks:
-            content = None
-
-            if task.subtasks:
-                content = self.make_completions(task)
-
-            d[task.slug] = content
-
-        return d
-
     def update_completions(self):
+        task_completer = TaskCompleter.from_tasks(self.manager.root_task)
+        self.completer = FuzzyCompleter(task_completer, WORD=False)
         return self.completer
-
-    def completions_filter(self):
-        return False
 
     def format_subtasks(
         self,
@@ -255,5 +206,8 @@ def start_cli_prompt(*args, **kwargs):
         try:
             while True:
                 cli_prompt.prompt()
+        except KeyboardInterrupt:
+            sys.exit(0)
+
         except EOFError:
             sys.exit(0)
