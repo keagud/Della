@@ -25,7 +25,7 @@ class CommandParser:
         self,
         filepath: str | Path = "~/.local/tasks.toml",
         named_days: Optional[dict[str, str]] = None,
-        resolve_func: Optional[Callable[[list[Task]], Task | None]] = None,
+        resolve_func: Optional[Callable[[list[Task]], Task]] = None,
         warn_func: Optional[Callable[[Task], bool]] = None,
         alert_func: Optional[Callable[[str], None]] = None,
     ) -> None:
@@ -66,25 +66,38 @@ class CommandParser:
 
         return c
 
-    def task_search(
-        self,
-        search_str: str | None,
-    ):
-        if search_str is None:
-            return None
+    def resolve_keyword(self, input_keyword: str) -> Task:
+        assert self.resolve_func is not None
 
-        search_results = self.manager.search(search_str)
+        options = self.manager.search(input_keyword)
 
-        if not search_results:
-            return None
+        if not options:
+            raise KeyError(f"'{input_keyword}' does not point to a valid task")
 
-        if len(search_results) == 1:
-            return search_results[0]
+        located_task = options[0]
 
-        if self.resolve_func is not None:
-            return self.resolve_func(search_results)
+        if len(options) > 1:
+            located_task = self.resolve_func(options)
 
-        return None
+        return located_task
+
+    def task_from_path(self, input_str: str):
+        task_index = self.manager.tasks_index
+
+        path_tokens = input_str.split("/")
+
+        if not path_tokens:
+            raise ValueError
+
+        task_start = self.manager.root_task
+
+        if path_tokens[0].startswith("#"):
+            task_start = self.resolve_keyword(path_tokens[0].strip("#"))
+            path_tokens = path_tokens[1:]
+
+        resolved_path = task_start.path_str + "/".join(path_tokens)
+
+        return task_index[resolved_path]
 
     def parse_input(self, input_str: str):
         date_match = self.date_parser.get_last(input_str)
@@ -104,41 +117,33 @@ class CommandParser:
         parent_id = None
         if slug_patterns:
             first_slug_match = slug_patterns[0]
-
+            parent_id = first_slug_match
             remainder_tokens.remove(first_slug_match)
 
-            parent_id = first_slug_match.strip("#")
-
-        #    print(remainder_tokens)
         return ParseResult(
             input_str, " ".join(remainder_tokens), command, date_match, parent_id
         )
 
     def resolve_input(self, parse_result: ParseResult):
         _, content, command, date_result, parent_id = parse_result
-        task_parent = self.task_search(parent_id)
         logging.debug(parse_result)
-        if task_parent is None:
-            task_parent = self.task_env
+
+        if not parent_id:
+            target_task = self.task_env
+
+        else:
+            target_task = self.task_from_path(parent_id)
 
         task_date = date_result.date if date_result is not None else None
 
         if not command:
-            new_task = self.manager.add_task(content, task_parent, task_date)
+            new_task = self.manager.add_task(content, target_task, task_date)
             self.manager.reindex()
             self.alert_func(f"Added task: {new_task.path_str}")
             return
 
-        if command.lower() in ("del", "rm", "done", "d"):
-            target_str = content
-
-            target_task = self.task_search(target_str)
-
-            if target_task is None:
-                raise ValueError(f"Could not find {target_str}")
-
+        if command.lower() in ("del", "delete", "rm", "done", "d"):
             self.manager.delete_task(target_task, warn_func=self.warn_func)
-
             return None
 
         if command.lower() in ("q", "quit", "exit"):

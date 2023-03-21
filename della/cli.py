@@ -10,6 +10,7 @@ from prompt_toolkit.completion import FuzzyCompleter
 
 from .command_parser import CommandParser
 from .completion import TaskCompleter
+from .debugging import debug
 from .task import Task
 
 
@@ -50,6 +51,7 @@ def cli_warn(t: Task, color="red"):
     return proceed_delete
 
 
+@debug
 def cli_resolve(tasks: list[Task], color="red"):
     color_print(
         "Multiple matches! Input the number of the target, or anything else to cancel",

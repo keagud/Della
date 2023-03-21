@@ -227,26 +227,33 @@ class TaskManager:
 
             self._set_task_format(task)
 
-    def search(self, search_path: str, relative: bool = True):
-        if search_path in self.tasks_index:
-            return [self.tasks_index[search_path]]
+    def search(
+        self,
+        target_str: str,
+        search_start: Optional[Task] = None,
+        test_func: Optional[Callable[[str, Task], bool]] = None,
+    ) -> list[Task]:
+        if not search_start:
+            search_start = self.root_task
 
-        start_task = self.root_task
-        if relative:
-            start_task = self.active_task
+        if not test_func:
 
-        search_queue = deque(start_task.subtasks)
-        found: list[Task] = []
+            def _test_func(a, b):
+                return a == b.slug
 
-        # i love you, bfs
+            test_func = _test_func
+
+        search_queue = deque(search_start.subtasks)
+        found = []
+
         while search_queue:
             t = search_queue.pop()
-            search_queue.extendleft(t.subtasks)
 
-            this_task_path = t.path_str
-
-            if this_task_path.endswith(search_path):
+            if test_func(target_str, t):
                 found.append(t)
+
+            if t.subtasks:
+                search_queue.extendleft(t.subtasks)
 
         return found
 

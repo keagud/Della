@@ -163,16 +163,14 @@ class TaskCompleter(Completer):
         # and also not needed in this case
         input_tokens = document.text_before_cursor.split()
         # import ipdb; ipdb.set_trace()
-        if not input_tokens:
+        if document.char_before_cursor.isspace() or not input_tokens:
             return self.null_complete
 
         tail = input_tokens[-1]
 
-        #        if tail.startswith("@"):
-        #            for c in self.completion_gen(("delete", "list", "quit", "set")):
-        #                yield c
-
-        # completion for the target of a command
+        if tail.startswith("@"):
+            for c in self.completion_gen(("delete", "list", "quit", "set")):
+                yield c
 
         starts_keyword_base = tail.startswith("#")
         starts_relative_base = tail.startswith("/")
