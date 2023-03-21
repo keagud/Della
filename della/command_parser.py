@@ -94,9 +94,9 @@ class CommandParser:
 
         remainder_tokens = remainder.strip().split()
 
-        # ! marks a command, everything else is considered a new task to add
+        # @ marks a command, everything else is considered a new task to add
         command = None
-        if remainder_tokens[0].startswith("!"):
+        if remainder_tokens[0].startswith("@"):
             command = remainder_tokens[0][1:]
             remainder_tokens = remainder_tokens[1:]
 
@@ -150,7 +150,7 @@ class CommandParser:
 
             return None
 
-        raise KeyError(f"!{command} is not a known command")
+        raise KeyError(f"@{command} is not a known command")
 
     def from_prompt(self, input_prompt: str):
         result = self.parse_input(input_prompt)

@@ -159,9 +159,7 @@ class TaskCompleter(Completer):
         if not search_keys or search_keys[0] not in search_dict:
             return None
 
-    def get_completions(
-        self, document: Document, complete_event: CompleteEvent
-    ) -> Iterable[Completion]:
+    def get_completions(self, document: Document, _) -> Iterable[Completion]:
         # avoiding regex because it scales VERY BADLY
         # and also not needed in this case
 

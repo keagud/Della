@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from .cli import start_cli_prompt
+from .cli import CLI_Parser, start_cli_prompt
 
 
 def make_parser():
@@ -28,10 +28,11 @@ def run():
     args = make_parser().parse_args()
 
     if args.graphical:
-        pass
+        raise NotImplementedError
 
     elif args.command:
-        pass
+        with CLI_Parser() as cli_parser:
+            cli_parser.from_prompt(" ".join(args.command))
 
     else:
         start_cli_prompt()
