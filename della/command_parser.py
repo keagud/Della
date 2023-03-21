@@ -73,7 +73,6 @@ class CommandParser:
         if search_str is None:
             return None
 
-        # ipdb.set_trace()
         search_results = self.manager.search(search_str)
 
         if not search_results:

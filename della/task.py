@@ -89,7 +89,10 @@ class Task:
         return self.content
 
     def __repr__(self):
-        return f"{self.content}|{self.due_date}"
+        if self.due_date is None:
+            return self.content
+
+        return f"{self.content} | {self.due_date}"
 
     def _define_subtasks(self, s: list[Task]):
         self.subtasks = s

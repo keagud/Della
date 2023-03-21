@@ -21,32 +21,31 @@ def cli_enter(
     return self
 
 
-def cli_alert(message: str) -> None:
-    print(message)
-
-
 def color_print(message, color, end="\n"):
     print_formatted_text(HTML(f"<{color}>{message}</{color}>"), end=end)
 
 
-def cli_warn(t: Task, color="red"):
-    warn_text = (
-        f"<{color}>Are you sure you want to delete '{t.full_path}'? (y/n) </{color}>"
-    )
+def cli_alert(message: str) -> None:
+    color_print(message, "skyblue")
 
-    color_print(warn_text, "red", end="")
+
+def cli_warn(t: Task, color="red"):
+    warn_text = f"Are you sure you want to delete '{t.path_str}'? (y/n)"
+
+    color_print(warn_text, color, end="")
 
     if t.subtasks:
-        subtask_text = f"\n<{color}> It has {len(t.subtasks)}"
-        " subtasks that will also be deleted </{color}>"
-        color_print(subtask_text, "red", end="")
+        subtask_text = (
+            f"\nIt has {len(t.subtasks)} subtasks that will also be deleted: "
+        )
+        color_print(subtask_text, color, end="")
 
     user_reply = input(" ")
 
     proceed_delete = user_reply.lower().startswith("y")
 
     if proceed_delete:
-        color_print(f'Deleted "{t}"', "red")
+        color_print(f'Deleted "{str(t)}"', "red")
 
     return proceed_delete
 
