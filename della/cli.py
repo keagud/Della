@@ -209,6 +209,7 @@ def start_cli_prompt(*args, **kwargs):
         try:
             while True:
                 cli_prompt.prompt()
+
         except KeyboardInterrupt:
             sys.exit(0)
 

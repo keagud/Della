@@ -54,7 +54,7 @@ def find_key_path(key_seq: list[str], input_dict: dict[str, Any]):
 
 
 def find_unique_keys(input_dict: dict[str, dict | None]):
-    keys: set[str] = set()
+    keys: set[str] = set(k for k, v in input_dict.items() if v is None)
     dupes = set()
 
     validated_input_dict: dict[str, dict] = {
@@ -161,13 +161,18 @@ class TaskCompleter(Completer):
     def get_completions(self, document: Document, _) -> Iterable[Completion]:
         # avoiding regex because it scales VERY BADLY
         # and also not needed in this case
-
         input_tokens = document.text_before_cursor.split()
-
+        # import ipdb; ipdb.set_trace()
         if not input_tokens:
             return self.null_complete
 
         tail = input_tokens[-1]
+
+        #        if tail.startswith("@"):
+        #            for c in self.completion_gen(("delete", "list", "quit", "set")):
+        #                yield c
+
+        # completion for the target of a command
 
         starts_keyword_base = tail.startswith("#")
         starts_relative_base = tail.startswith("/")
