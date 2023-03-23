@@ -190,7 +190,7 @@ class TaskManager:
 
     def serialize(self, fp: TextIO):
         data_dict = {
-            "meta": {"timestamp": time.time() // 1},
+            "meta": {"timestamp": int(time.time())},
             "tasks": self.root_task._to_dict(recurse=True),
         }
 

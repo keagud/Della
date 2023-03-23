@@ -10,6 +10,7 @@ from prompt_toolkit.completion import FuzzyCompleter
 
 from .command_parser import CommandParser
 from .completion import TaskCompleter
+from .constants import TASK_FILE_PATH
 from .debugging import debug
 from .task import Task
 
@@ -63,14 +64,10 @@ def cli_resolve(tasks: list[Task], color="red"):
 
     selection = input()
 
-    if not selection.isnumeric():
-        return None
-
     selection_int = int(selection) - 1
 
     if not 0 <= selection_int < len(tasks):
-        color_print("Invalid selection", color)
-        return None
+        raise IndexError("Invalid selection")
 
     return tasks[selection_int]
 
@@ -85,7 +82,7 @@ def command_exit(self: CommandParser, *args, **kwargs):
 class CLI_Parser(CommandParser):
     def __init__(
         self,
-        filepath: str | Path = "~/.local/tasks.toml",
+        filepath: str | Path = TASK_FILE_PATH,
         named_days: Optional[dict[str, str]] = None,
         prompt_display: str = "@=> ",
         prompt_color: str = "skyblue",

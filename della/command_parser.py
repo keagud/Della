@@ -9,6 +9,7 @@ from typing import Callable, NamedTuple, Optional
 from dateparse import DateParser
 from dateparse.parseutil import DateResult
 
+from .constants import TASK_FILE_PATH
 from .task import Task, TaskManager
 
 
@@ -23,7 +24,7 @@ class ParseResult(NamedTuple):
 class CommandParser:
     def __init__(
         self,
-        filepath: str | Path = "~/.local/tasks.toml",
+        filepath: str | Path = TASK_FILE_PATH,
         named_days: Optional[dict[str, str]] = None,
         resolve_func: Optional[Callable[[list[Task]], Task]] = None,
         warn_func: Optional[Callable[[Task], bool]] = None,

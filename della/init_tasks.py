@@ -4,6 +4,7 @@ from typing import Callable, Optional
 
 import fabric
 import toml
+from constants import CONFIG_PATH
 
 
 @dataclass
@@ -42,7 +43,7 @@ class DellaConfig:
         return data_dict
 
     @classmethod
-    def load(cls, filepath: str | Path = "~/.config/della/config.toml"):
+    def load(cls, filepath: str | Path = CONFIG_PATH):
         config_file = Path(filepath).expanduser().resolve()
 
         with open(config_file, "r") as infile:
