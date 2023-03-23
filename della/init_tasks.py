@@ -1,10 +1,13 @@
+import os
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
+from pprint import pprint
 from typing import Callable, Optional
 
 import fabric
 import toml
-from constants import CONFIG_PATH
+from constants import CONFIG_PATH, REMOTE_PATH, TASK_FILE_PATH, TMP_SYNCFILE
 
 
 @dataclass
@@ -41,6 +44,15 @@ class DellaConfig:
 
         data_dict.update({"remote": remote_options})
         return data_dict
+
+    @classmethod
+    def default(cls):
+        default_config = {
+            "local": {"tasks_path": TASK_FILE_PATH},
+            "remote": {"use_remote": False, "tasks_path": REMOTE_PATH},
+        }
+
+        return DellaConfig(default_config, CONFIG_PATH)
 
     @classmethod
     def load(cls, filepath: str | Path = CONFIG_PATH):
@@ -94,12 +106,12 @@ class DellaConfig:
         return {
             "host": self.remote_ip,
             "user": self.remote_user,
-            "connect_kwargs": {"key_filename": self.private_key_location},
+            "connect_kwargs": {"key_filename": self.private_key_location.as_posix()},
         }
 
     @property
-    def task_file_local(self) -> str:
-        return self._task_file_local.as_posix()
+    def task_file_local(self) -> Path:
+        return self._task_file_local
 
     @task_file_local.setter
     def task_file_local(self, input_path: Path | str):
@@ -111,11 +123,11 @@ class DellaConfig:
         self._task_file_local = new_path
 
     @property
-    def task_file_remote(self) -> str:
+    def task_file_remote(self) -> Path:
         if self._task_file_remote is None:
             raise KeyError
 
-        return self._task_file_remote.as_posix()
+        return self._task_file_remote
 
     @task_file_remote.setter
     def task_file_remote(self, input_path: Path | str):
@@ -123,86 +135,122 @@ class DellaConfig:
         self._task_file_remote = new_abspath.relative_to(Path.home())
 
     @property
-    def private_key_location(self) -> str:
+    def private_key_location(self) -> Path:
         if self._private_key_location is None:
             raise KeyError
 
-        return self._private_key_location.as_posix()
+        return self._private_key_location
 
     @private_key_location.setter
     def private_key_location(self, input_path: Path | str):
         self._private_key_location = Path(input_path).expanduser().resolve()
 
 
-def make_default_config():
-    raise NotImplementedError
+class SyncManager:
+    def __init__(
+        self,
+        config: Optional[DellaConfig] = None,
+        resolve_func: Optional[Callable[..., bool]] = None,
+    ):
+        if config is None:
+            config = DellaConfig.load()
 
+        self.config = config
 
-def get_file_timestamp(file: Path):
-    with open(file, "r") as infile:
-        contents = toml.load(infile)
+        self.resolve_func = resolve_func
 
-    timestamp: int = contents["meta"]["timestamp"]
+        self.tmp_syncfile = self.config.task_file_local.parent.joinpath(TMP_SYNCFILE)
 
-    return timestamp
+    def get_most_recent(self):
+        return self.compare_file_versions(
+            local=self.config.task_file_local, remote=self.tmp_syncfile
+        )
 
+    def fetch_remote(self):
+        pprint(self.tmp_syncfile)
 
-def compare_file_versions(
-    local: Optional[Path], remote: Optional[Path]
-) -> Optional[Path]:
-    if local is None and remote is None:
-        return None
+        self.config.task_file_local.parent.mkdir(exist_ok=True, parents=True)
+        with fabric.Connection(**self.config.connect_args) as connection:
+            connection.get(
+                self.config.task_file_remote.as_posix(),
+                local=self.tmp_syncfile.as_posix(),
+            )
 
-    if local is None or not local.exists():
-        return remote
+    def push_remote(self) -> None:
+        remote_dir = self.config.task_file_remote.parent
+        with fabric.Connection(**self.config.connect_args) as connection:
+            connection.run(f"mkdir -p {remote_dir.as_posix()}")
+            connection.put(
+                self.config.task_file_local.as_posix(),
+                remote=self.config.task_file_remote.as_posix(),
+            )
 
-    if remote is None or not remote.exists():
-        return local
+    def pull_and_update(self) -> None:
+        self.fetch_remote()
 
-    local_timestamp = get_file_timestamp(local)
-    remote_timestamp = get_file_timestamp(remote)
+        if self.get_most_recent() == self.config.task_file_local:
+            overwrite_newest = False
+            if self.resolve_func is not None:
+                overwrite_newest = self.resolve_func("pull")
 
-    return local if local_timestamp > remote_timestamp else remote
+            if not overwrite_newest:
+                return
 
+        shutil.move(self.tmp_syncfile, self.config.task_file_local)
 
-def sync_remote(
-    config: Optional[DellaConfig] = None,
-    resolve_func: Optional[Callable[[None], bool]] = None,
-):
-    if config is None:
-        config = DellaConfig.load()
+    def push_and_update(self) -> None:
+        try:
+            self.fetch_remote()
+        except FileNotFoundError:
+            self.push_remote()
+            return
 
-    tasks_dir = Path(config.task_file_local).parent
-    remote_taskfile = tasks_dir.joinpath("~tmp_tasks.toml")
+        if self.get_most_recent() == self.tmp_syncfile:
+            print("aaa")
+            overwrite_newest = True
+            if self.resolve_func is not None:
+                overwrite_newest = self.resolve_func("push")
+            if not overwrite_newest:
+                return
 
-    try:
-        with fabric.Connection(**config.connect_args) as c:
-            c.get(config.task_file_remote, local=remote_taskfile.as_posix())
+        self.push_remote()
+        os.remove(self.tmp_syncfile)
 
-    except FileNotFoundError:
-        pass
+    def get_file_timestamp(self, file: Path):
+        pprint(file)
+        with open(file, "r") as infile:
+            contents = toml.load(infile)
+            pprint(contents)
 
-    most_recent = compare_file_versions(Path(config.task_file_local), remote_taskfile)
+        if not contents:
+            return 0
 
-    assert most_recent is not None
+        timestamp: int = contents["meta"]["timestamp"]
 
+        return timestamp
 
-def push_remote(config: Optional[DellaConfig] = None):
-    pass
+    def compare_file_versions(
+        self, local: Optional[Path], remote: Optional[Path]
+    ) -> Path:
+        if local is None and remote is None:
+            raise FileNotFoundError
 
+        if local is None or not local.exists():
+            assert remote is not None
+            return remote
 
-def fetch_remote(
-    config: DellaConfig,
-):
-    tasks_dir = Path(config.task_file_local).parent
-    tmp_taskfile = tasks_dir.joinpath("~tmp_tasks.toml")
+        if remote is None or not remote.exists():
+            return local
 
-    with fabric.Connection(**config.connect_args) as c:
-        c.get(config.task_file_remote, local=tmp_taskfile.as_posix())
+        local_timestamp = self.get_file_timestamp(local)
+        remote_timestamp = self.get_file_timestamp(remote)
+
+        return local if local_timestamp > remote_timestamp else remote
 
 
 def main():
-    sync_remote()
+    sync_manager = SyncManager()
+    sync_manager.pull_and_update()
 
 
 if __name__ == "__main__":
