@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import types
 from collections import deque
 from datetime import date as DateType
@@ -188,15 +189,19 @@ class TaskManager:
         return self.tasks_index.__repr__()
 
     def serialize(self, fp: TextIO):
-        tasks_dicts = self.root_task._to_dict(recurse=True)
-        toml.dump(tasks_dicts, fp)
+        data_dict = {
+            "meta": {"timestamp": time.time() // 1},
+            "tasks": self.root_task._to_dict(recurse=True),
+        }
 
-        return tasks_dicts
+        toml.dump(data_dict, fp)
+
+        return data_dict
 
     @classmethod
     def deserialize(cls, filepath: str | Path, fp: Optional[TextIO] = None, **kwargs):
         new_manager = TaskManager(save_file=filepath, **kwargs)
-        data_dict: dict[str, str | list[dict]] = {}
+        data_dict: dict[str, dict] = {}
 
         if not fp:
             with open(new_manager.save_file_path, "r") as load_file:
@@ -204,7 +209,9 @@ class TaskManager:
         else:
             data_dict = toml.load(fp)
 
-        tasks = [v for v in data_dict.get("subtasks", []) if isinstance(v, dict)]
+        tasks_dict: dict[str, str | list[dict]] = data_dict.get("tasks", {})
+
+        tasks = [v for v in tasks_dict.get("subtasks", []) if isinstance(v, dict)]
         root_subtasks = list(
             map(partial(Task.init_from_dict, new_manager.root_task), tasks)
         )
