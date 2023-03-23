@@ -29,6 +29,7 @@ textual = {extras = ["dev"], version = "^0.13.0"}
 python-slugify = "^8.0.1"
 prompt-toolkit = "^3.0.38"
 argparse = "^1.4.0"
+fabric = "^3.0.0"
 
 [tool.poetry.group.dev.dependencies]
 coverage = "*"
