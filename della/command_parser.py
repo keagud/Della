@@ -9,7 +9,8 @@ from typing import Callable, NamedTuple, Optional
 from dateparse import DateParser
 from dateparse.parseutil import DateResult
 
-from .constants import TASK_FILE_PATH
+from .constants import CONFIG_PATH, TASK_FILE_PATH
+from .init_tasks import DellaConfig
 from .task import Task, TaskManager
 
 
@@ -25,6 +26,7 @@ class CommandParser:
     def __init__(
         self,
         filepath: str | Path = TASK_FILE_PATH,
+        config_path: str | Path = CONFIG_PATH,
         named_days: Optional[dict[str, str]] = None,
         resolve_func: Optional[Callable[[list[Task]], Task]] = None,
         warn_func: Optional[Callable[[Task], bool]] = None,
@@ -33,6 +35,8 @@ class CommandParser:
         self.date_parser = DateParser(named_days=named_days)
         self.resolve_func = resolve_func
         self.warn_func = warn_func
+
+        self.config = DellaConfig.load(filepath=config_path)
 
         if not alert_func:
             self.alert_func = lambda *args, **kwargs: None
