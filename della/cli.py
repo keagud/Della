@@ -10,7 +10,7 @@ from prompt_toolkit.completion import FuzzyCompleter
 
 from .command_parser import CommandParser
 from .completion import TaskCompleter
-from .constants import TASK_FILE_PATH
+from .constants import CONFIG_PATH, TASK_FILE_PATH
 from .debugging import debug
 from .task import Task
 
@@ -83,12 +83,14 @@ class CLI_Parser(CommandParser):
     def __init__(
         self,
         filepath: str | Path = TASK_FILE_PATH,
+        config_file: str | Path = CONFIG_PATH,
         named_days: Optional[dict[str, str]] = None,
         prompt_display: str = "@=> ",
         prompt_color: str = "skyblue",
     ) -> None:
         super().__init__(
             filepath,
+            config_file,
             named_days,
             resolve_func=cli_resolve,
             warn_func=cli_warn,

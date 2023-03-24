@@ -35,14 +35,12 @@ class CommandParser:
         self.date_parser = DateParser(named_days=named_days)
         self.resolve_func = resolve_func
         self.warn_func = warn_func
-
         self.config = DellaConfig.load(filepath=config_path)
 
         if not alert_func:
             self.alert_func = lambda *args, **kwargs: None
         else:
             self.alert_func = alert_func
-
         self.filepath = Path(filepath).expanduser().resolve()
 
         if not self.filepath.exists():

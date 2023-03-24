@@ -2,45 +2,39 @@ import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from pprint import pprint
-from typing import Callable, Optional
+from typing import Any, Callable, NamedTuple, Optional
 
 import fabric
 import toml
-from constants import CONFIG_PATH, REMOTE_PATH, TASK_FILE_PATH, TMP_SYNCFILE
+
+from .constants import CONFIG_PATH, REMOTE_PATH, TASK_FILE_PATH, TMP_SYNCFILE
+
+
+class SyncConfig(NamedTuple):
+    address: str
+    user: str
+    task_file_remote: Path
+    private_key_location: Path
+    use_remote: Optional[bool]
 
 
 @dataclass
 class DellaConfig:
     init_dict: dict
-
     init_config_filepath: str | Path
 
     config_filepath: Path = field(init=False)
-
-    _task_file_local: Path = field(init=False)
     use_remote: bool = field(init=False)
 
-    remote_ip: Optional[str] = field(init=False)
-    remote_user: Optional[str] = field(init=False)
-
-    _task_file_remote: Optional[Path] = field(init=False)
-    _private_key_location: Optional[Path] = field(init=False)
+    sync_config: Optional[SyncConfig] = None
 
     def serialize(self):
-        data_dict = {"local": {"tasks_path": self.task_file_local}}
+        data_dict = {"local": {"tasks_file_local": self.task_file_local.as_posix()}}
 
-        remote_options = {
-            k: v
-            for k, v in {
-                "use_remote": self.use_remote,
-                "ip": self.remote_ip,
-                "user": self.remote_user,
-                "tasks_path": self.task_file_remote,
-                "private_key_location": self.private_key_location,
-            }.items()
-            if v is not None
-        }
+        remote_options: dict[str, Any] = {"use_remote": self.use_remote}
+
+        if self.sync_config is not None:
+            remote_options.update(self.sync_config._asdict())
 
         data_dict.update({"remote": remote_options})
         return data_dict
@@ -48,14 +42,16 @@ class DellaConfig:
     @classmethod
     def default(cls):
         default_config = {
-            "local": {"tasks_path": TASK_FILE_PATH},
-            "remote": {"use_remote": False, "tasks_path": REMOTE_PATH},
+            "local": {"tasks_file_local": TASK_FILE_PATH},
+            "remote": {"use_remote": False, "tasks_file_remote": REMOTE_PATH},
         }
 
         return DellaConfig(default_config, CONFIG_PATH)
 
     @classmethod
     def load(cls, filepath: str | Path = CONFIG_PATH):
+        print(CONFIG_PATH)
+        print(filepath)
         config_file = Path(filepath).expanduser().resolve()
 
         with open(config_file, "r") as infile:
@@ -84,29 +80,34 @@ class DellaConfig:
 
         self.config_filepath = Path(self.init_config_filepath).expanduser().resolve()
 
-        self.task_file_local = local_options["tasks_path"]
+        self.task_file_local = local_options["task_file_local"]
         self.use_remote = remote_options["use_remote"]
-
-        self.remote_ip = remote_options.get("ip")
-        self.remote_user = remote_options.get("user")
-        self.task_file_remote = remote_options.get("tasks_path")
-        self.private_key_location = remote_options.get("private_key_location")
+        self.sync_config = None
 
         if self.use_remote:
-            for option in (
-                self.remote_ip,
-                self.remote_user,
-                self.task_file_remote,
-                self.private_key_location,
-            ):
-                assert option is not None
+            remote_options["private_key_location"] = (
+                Path(remote_options["private_key_location"]).expanduser().resolve()
+            )
+
+            remote_file = Path(remote_options["task_file_remote"])
+
+            remote_options["task_file_remote"] = (
+                remote_file.expanduser().resolve().relative_to(remote_file.home())
+            )
+
+            self.sync_config = SyncConfig(**remote_options)
 
     @property
     def connect_args(self):
+        if self.sync_config is None:
+            raise ValueError
+
         return {
-            "host": self.remote_ip,
-            "user": self.remote_user,
-            "connect_kwargs": {"key_filename": self.private_key_location.as_posix()},
+            "host": self.sync_config.address,
+            "user": self.sync_config.user,
+            "connect_kwargs": {
+                "key_filename": self.sync_config.private_key_location.as_posix()
+            },
         }
 
     @property
@@ -122,29 +123,6 @@ class DellaConfig:
 
         self._task_file_local = new_path
 
-    @property
-    def task_file_remote(self) -> Path:
-        if self._task_file_remote is None:
-            raise KeyError
-
-        return self._task_file_remote
-
-    @task_file_remote.setter
-    def task_file_remote(self, input_path: Path | str):
-        new_abspath = Path(input_path).expanduser().resolve()
-        self._task_file_remote = new_abspath.relative_to(Path.home())
-
-    @property
-    def private_key_location(self) -> Path:
-        if self._private_key_location is None:
-            raise KeyError
-
-        return self._private_key_location
-
-    @private_key_location.setter
-    def private_key_location(self, input_path: Path | str):
-        self._private_key_location = Path(input_path).expanduser().resolve()
-
 
 class SyncManager:
     def __init__(
@@ -156,6 +134,10 @@ class SyncManager:
             config = DellaConfig.load()
 
         self.config = config
+        sync_config = config.sync_config
+
+        assert sync_config is not None
+        self.sync_config: SyncConfig = sync_config
 
         self.resolve_func = resolve_func
 
@@ -167,22 +149,18 @@ class SyncManager:
         )
 
     def fetch_remote(self):
-        pprint(self.tmp_syncfile)
-
         self.config.task_file_local.parent.mkdir(exist_ok=True, parents=True)
         with fabric.Connection(**self.config.connect_args) as connection:
             connection.get(
-                self.config.task_file_remote.as_posix(),
+                self.sync_config.task_file_remote.as_posix(),
                 local=self.tmp_syncfile.as_posix(),
             )
 
     def push_remote(self) -> None:
-        remote_dir = self.config.task_file_remote.parent
         with fabric.Connection(**self.config.connect_args) as connection:
-            connection.run(f"mkdir -p {remote_dir.as_posix()}")
             connection.put(
                 self.config.task_file_local.as_posix(),
-                remote=self.config.task_file_remote.as_posix(),
+                remote=self.sync_config.task_file_remote.as_posix(),
             )
 
     def pull_and_update(self) -> None:
@@ -217,10 +195,8 @@ class SyncManager:
         os.remove(self.tmp_syncfile)
 
     def get_file_timestamp(self, file: Path):
-        pprint(file)
         with open(file, "r") as infile:
             contents = toml.load(infile)
-            pprint(contents)
 
         if not contents:
             return 0
@@ -249,8 +225,9 @@ class SyncManager:
 
 
 def main():
-    sync_manager = SyncManager()
-    sync_manager.pull_and_update()
+    sm = SyncManager()
+
+    sm.pull_and_update()
 
 
 if __name__ == "__main__":
