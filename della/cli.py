@@ -15,14 +15,6 @@ from .debugging import debug
 from .task import Task
 
 
-def cli_enter(
-    self: CommandParser,
-    *args,
-    **kwargs,
-):
-    return self
-
-
 def color_print(message, color, end="\n"):
     print_formatted_text(HTML(f"<{color}>{message}</{color}>"), end=end)
 
@@ -70,13 +62,6 @@ def cli_resolve(tasks: list[Task], color="red"):
         raise IndexError("Invalid selection")
 
     return tasks[selection_int]
-
-
-def command_exit(self: CommandParser, *args, **kwargs):
-    with open(self.manager.save_file_path, "w") as taskfile:
-        self.manager.serialize(taskfile)
-
-    print(f"Saved to {self.manager.save_file_path}")
 
 
 class CLI_Parser(CommandParser):
@@ -193,16 +178,13 @@ class CLI_Parser(CommandParser):
     def prompt(self):
         self.from_prompt(self.session.prompt(completer=self.update_completions()))
 
-    def __enter__(self, *args, **kwargs):
+    def ___enter__(self, *args, **kwargs):
         signal(SIGINT, self._sigint_handler)
-        return cli_enter(self, *args, **kwargs)
+        return super().__enter__()
 
     def _sigint_handler(self, signal_received, frame):
         self.__exit__(None, None, None)
         sys.exit(0)
-
-    def __exit__(self, *args, **kwargs):
-        return command_exit(self, *args, **kwargs)
 
 
 def start_cli_prompt(*args, **kwargs):

@@ -7,7 +7,8 @@ from typing import Any, Callable, NamedTuple, Optional
 
 import fabric
 import toml
-from constants import CONFIG_PATH, REMOTE_PATH, TASK_FILE_PATH, TMP_SYNCFILE
+
+from .constants import CONFIG_PATH, REMOTE_PATH, TASK_FILE_PATH, TMP_SYNCFILE
 
 
 class SyncConfig(NamedTuple):

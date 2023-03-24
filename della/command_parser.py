@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import abc
 import logging
 import os
 import sys
@@ -10,7 +11,7 @@ from dateparse import DateParser
 from dateparse.parseutil import DateResult
 
 from .constants import CONFIG_PATH, TASK_FILE_PATH
-from .init_tasks import DellaConfig
+from .init_tasks import DellaConfig, SyncManager
 from .task import Task, TaskManager
 
 
@@ -22,7 +23,7 @@ class ParseResult(NamedTuple):
     parent_identifier: str | None = None
 
 
-class CommandParser:
+class CommandParser(metaclass=abc.ABCMeta):
     def __init__(
         self,
         filepath: str | Path = TASK_FILE_PATH,
@@ -36,6 +37,11 @@ class CommandParser:
         self.resolve_func = resolve_func
         self.warn_func = warn_func
         self.config = DellaConfig.load(filepath=config_path)
+
+        self.sync_manager: Optional[SyncManager] = None
+
+        if self.config.use_remote and self.config.sync_config is not None:
+            self.sync_manager = SyncManager(self.config)
 
         if not alert_func:
             self.alert_func = lambda *args, **kwargs: None
@@ -58,16 +64,18 @@ class CommandParser:
         raise NotImplementedError
 
     def __enter__(self, *args, **kwargs):
-        raise NotImplementedError
+        if self.config.use_remote and self.sync_manager is not None:
+            print("fetching from remote...")
+            self.sync_manager.pull_and_update()
+        return self
 
     def __exit__(self, *args, **kwargs):
-        raise NotImplementedError
+        with open(self.manager.save_file_path, "w") as taskfile:
+            self.manager.serialize(taskfile)
 
-    @classmethod
-    def create(cls, mode: str = "cli", *args, **kwargs):
-        c = CommandParser(*args, **kwargs, alert_func=print)
-
-        return c
+        if self.config.use_remote and self.sync_manager is not None:
+            print("pushing to remote...")
+            self.sync_manager.push_and_update()
 
     def resolve_keyword(self, input_keyword: str) -> Task:
         assert self.resolve_func is not None
