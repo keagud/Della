@@ -1,4 +1,21 @@
 import functools
+from time import perf_counter
+
+
+def stopwatch(func):
+    """Print the time a function took to execute"""
+
+    @functools.wraps(func)
+    def wrapper_stopwatch(*args, **kwargs):
+        start_time = perf_counter()
+        return_val = func(*args, **kwargs)
+        end_time = perf_counter()
+
+        print(f"{func.__name__} executed in {end_time - start_time :.3} sec")
+
+        return return_val
+
+    return wrapper_stopwatch
 
 
 def debug(func):

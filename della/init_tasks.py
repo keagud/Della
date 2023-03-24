@@ -1,13 +1,13 @@
 import os
 import shutil
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, NamedTuple, Optional
 
 import fabric
 import toml
-
-from .constants import CONFIG_PATH, REMOTE_PATH, TASK_FILE_PATH, TMP_SYNCFILE
+from constants import CONFIG_PATH, REMOTE_PATH, TASK_FILE_PATH, TMP_SYNCFILE
 
 
 class SyncConfig(NamedTuple):
@@ -50,8 +50,6 @@ class DellaConfig:
 
     @classmethod
     def load(cls, filepath: str | Path = CONFIG_PATH):
-        print(CONFIG_PATH)
-        print(filepath)
         config_file = Path(filepath).expanduser().resolve()
 
         with open(config_file, "r") as infile:
@@ -143,28 +141,32 @@ class SyncManager:
 
         self.tmp_syncfile = self.config.task_file_local.parent.joinpath(TMP_SYNCFILE)
 
+    def ping(self, count: int = 3):
+        subprocess.run(
+            ["ping", self.sync_config.address, f"-c {count}"]
+        ).check_returncode()
+
     def get_most_recent(self):
         return self.compare_file_versions(
             local=self.config.task_file_local, remote=self.tmp_syncfile
         )
 
-    def fetch_remote(self):
+    def fetch_remote(self, connection: fabric.Connection):
         self.config.task_file_local.parent.mkdir(exist_ok=True, parents=True)
-        with fabric.Connection(**self.config.connect_args) as connection:
-            connection.get(
-                self.sync_config.task_file_remote.as_posix(),
-                local=self.tmp_syncfile.as_posix(),
-            )
+        connection.get(
+            self.sync_config.task_file_remote.as_posix(),
+            local=self.tmp_syncfile.as_posix(),
+        )
 
-    def push_remote(self) -> None:
-        with fabric.Connection(**self.config.connect_args) as connection:
-            connection.put(
-                self.config.task_file_local.as_posix(),
-                remote=self.sync_config.task_file_remote.as_posix(),
-            )
+    def push_remote(self, connection: fabric.Connection) -> None:
+        connection.put(
+            self.config.task_file_local.as_posix(),
+            remote=self.sync_config.task_file_remote.as_posix(),
+        )
 
     def pull_and_update(self) -> None:
-        self.fetch_remote()
+        with fabric.Connection(**self.config.connect_args) as connection:
+            self.fetch_remote(connection)
 
         if self.get_most_recent() == self.config.task_file_local:
             overwrite_newest = False
@@ -177,21 +179,21 @@ class SyncManager:
         shutil.move(self.tmp_syncfile, self.config.task_file_local)
 
     def push_and_update(self) -> None:
-        try:
-            self.fetch_remote()
-        except FileNotFoundError:
-            self.push_remote()
-            return
-
-        if self.get_most_recent() == self.tmp_syncfile:
-            print("aaa")
-            overwrite_newest = True
-            if self.resolve_func is not None:
-                overwrite_newest = self.resolve_func("push")
-            if not overwrite_newest:
+        with fabric.Connection(**self.config.connect_args) as connection:
+            try:
+                self.fetch_remote(connection)
+            except FileNotFoundError:
+                self.push_remote(connection)
                 return
 
-        self.push_remote()
+            if self.get_most_recent() == self.tmp_syncfile:
+                overwrite_newest = True
+                if self.resolve_func is not None:
+                    overwrite_newest = self.resolve_func("push")
+                if not overwrite_newest:
+                    return
+
+            self.push_remote(connection)
         os.remove(self.tmp_syncfile)
 
     def get_file_timestamp(self, file: Path):
@@ -226,8 +228,8 @@ class SyncManager:
 
 def main():
     sm = SyncManager()
-
     sm.pull_and_update()
+    sm.push_and_update()
 
 
 if __name__ == "__main__":
