@@ -5,8 +5,10 @@ from shutil import get_terminal_size
 from signal import SIGINT, signal
 from typing import Optional
 
+from getchoice import ChoicePrinter
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
 from prompt_toolkit.completion import FuzzyCompleter
+from prompt_toolkit.formatted_text import FormattedText
 
 from .command_parser import CommandParser
 from .completion import TaskCompleter
@@ -17,6 +19,23 @@ from .task import Task
 
 def color_print(message, color, end="\n"):
     print_formatted_text(HTML(f"<{color}>{message}</{color}>"), end=end)
+
+
+def make_cli_interface(normal_style: str, selected_style: str, title_style: str):
+    chooser = ChoicePrinter(
+        normal_style=normal_style,
+        title_style=title_style,
+        selected_style=selected_style,
+    )
+
+    def cli_alert(message: str) -> None:
+        print_formatted_text(FormattedText([(normal_style, message)]))
+
+    def cli_resolve_task(options: list[Task]) -> Task:
+        alert_title = "Multiple matches!"
+        " Input the number of the target, or anything else to cancel"
+
+        return chooser.getchoice([(t.path_str, t) for t in options], title=alert_title)
 
 
 def cli_alert(message: str) -> None:
