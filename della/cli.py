@@ -65,9 +65,11 @@ class CLI_Parser(CommandParser):
         filepath: str | Path = TASK_FILE_PATH,
         config_file: str | Path = CONFIG_PATH,
         named_days: Optional[dict[str, str]] = None,
-        prompt_display: str = "@=> ",
+        prompt_display: str = "=> ",
         prompt_color: str = "skyblue",
     ) -> None:
+        self.prompt_display = prompt_display
+        self.prompt_color = prompt_color
         super().__init__(
             make_cli_interface(**styling),
             filepath,
@@ -77,7 +79,7 @@ class CLI_Parser(CommandParser):
 
         prompt_display = f"<{prompt_color}>{prompt_display}</{prompt_color}>"
         self.session = PromptSession(
-            HTML(prompt_display),
+            self.make_prompt_display(),
             complete_while_typing=True,
             completer=self.update_completions(),
         )
@@ -94,6 +96,15 @@ class CLI_Parser(CommandParser):
             "violet",
         ]
         self.colors_iter = cycle(reversed(color_options))
+
+    def make_prompt_display(self):
+        elements = ""
+        if self.task_env != self.manager.root_task:
+            elements = "/".join(t.slug for t in self.task_env.full_path[-3:]) + "|"
+
+        return HTML(
+            f"<{self.prompt_color}>{elements}{self.prompt_display}</{self.prompt_color}>"
+        )
 
     def update_completions(self):
         task_completer = TaskCompleter.from_tasks(self.manager.root_task)
@@ -169,7 +180,11 @@ class CLI_Parser(CommandParser):
         print_formatted_text(HTML(formatted))
 
     def prompt(self):
-        self.from_prompt(self.session.prompt(completer=self.update_completions()))
+        self.from_prompt(
+            self.session.prompt(
+                self.make_prompt_display(), completer=self.update_completions()
+            )
+        )
 
     def ___enter__(self, *args, **kwargs):
         signal(SIGINT, self._sigint_handler)
