@@ -13,12 +13,7 @@ from prompt_toolkit.formatted_text import FormattedText
 from .command_parser import CommandParser, CommandsInterface
 from .completion import TaskCompleter
 from .constants import CONFIG_PATH, TASK_FILE_PATH
-from .debugging import debug
 from .task import Task
-
-
-def color_print(message, color, end="\n"):
-    print_formatted_text(HTML(f"<{color}>{message}</{color}>"), end=end)
 
 
 def make_cli_interface(normal_style: str, selected_style: str, title_style: str):
@@ -57,51 +52,6 @@ def make_cli_interface(normal_style: str, selected_style: str, title_style: str)
     return CommandsInterface(
         cli_alert, cli_resolve_task, cli_confirm_delete, cli_resolve_sync
     )
-
-
-def cli_alert(message: str) -> None:
-    color_print(message, "skyblue")
-
-
-def cli_warn(t: Task, color="red"):
-    warn_text = f"Are you sure you want to delete '{t.path_str}'? (y/n)"
-
-    color_print(warn_text, color, end="")
-
-    if t.subtasks:
-        subtask_text = (
-            f"\nIt has {len(t.subtasks)} subtasks that will also be deleted: "
-        )
-        color_print(subtask_text, color, end="")
-
-    user_reply = input(" ")
-
-    proceed_delete = user_reply.lower().startswith("y")
-
-    if proceed_delete:
-        color_print(f'Deleted "{str(t)}"', "red")
-
-    return proceed_delete
-
-
-@debug
-def cli_resolve(tasks: list[Task], color="red"):
-    color_print(
-        "Multiple matches! Input the number of the target, or anything else to cancel",
-        color,
-    )
-
-    for i, t in enumerate(tasks, start=1):
-        print(f"{i}. {t.full_path}")
-
-    selection = input()
-
-    selection_int = int(selection) - 1
-
-    if not 0 <= selection_int < len(tasks):
-        raise IndexError("Invalid selection")
-
-    return tasks[selection_int]
 
 
 class CLI_Parser(CommandParser):
