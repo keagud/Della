@@ -23,6 +23,13 @@ class ParseResult(NamedTuple):
     parent_identifier: str | None = None
 
 
+class CommandsInterface(NamedTuple):
+    alert: Callable[[str], None]
+    resolve_task: Callable[[list[Task]], Task]
+    confirm_delete: Callable[[Task], bool]
+    resolve_sync: Callable[[None], bool]
+
+
 class CommandParser(metaclass=abc.ABCMeta):
     def __init__(
         self,

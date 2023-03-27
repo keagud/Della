@@ -809,6 +809,33 @@ files = [
 ]
 
 [[package]]
+name = "getchoice"
+version = "1.0.0"
+description = "Simple, extensible user selection interface for CLI applications"
+category = "main"
+optional = false
+python-versions = ">=3.8,<4"
+files = [
+    {file = "getchoice-1.0.0-py3-none-any.whl", hash = "sha256:d7866d879d5e5e3ca8d8c84c7358cc7d3946d7fa96a387fdd513b10d6d1bb602"},
+    {file = "getchoice-1.0.0.tar.gz", hash = "sha256:d40219e674322664b67fcb6f5380e208fe1a62d7ae5e24575e17ec6ec4c89847"},
+]
+
+[package.dependencies]
+getkey = ">=0.6.5,<0.7.0"
+prompt-toolkit = ">=3.0.38,<4.0.0"
+
+[[package]]
+name = "getkey"
+version = "0.6.5"
+description = "Read single characters and key-strokes"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "getkey-0.6.5.tar.gz", hash = "sha256:68c7c702c3b34deacf427f6c0f1fd66c5c2aa12d7801aa32442fc1a71c8ce059"},
+]
+
+[[package]]
 name = "ghp-import"
 version = "2.1.0"
 description = "Copy your docs directly to the gh-pages branch."
@@ -2255,4 +2282,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4"
-content-hash = "97b913fea8350efd23ae20d03ad3bc7c27fc294947181a9f3dbfdd39d12dc1c5"
+content-hash = "26a76bc3e2a15c890c13c56211dccc94513b70e897775c5439bade3bfbeeb5ff"
