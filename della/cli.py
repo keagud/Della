@@ -41,10 +41,10 @@ def make_cli_interface(normal_style: str, selected_style: str, title_style: str)
         return chosen
 
     def cli_confirm_delete(t: Task) -> bool:
-        delete_message = f"Really delete '{t.path_str}?'"
+        delete_message = f"Really delete '{t}?'"
 
         if t.subtasks:
-            delete_message += "\nIt has {len(t.subtasks)} subtasks"
+            delete_message += f"\nIt has {len(t.subtasks)} subtasks"
 
         _, chosen = chooser.getchoice(
             [("yes", True), ("no", False)], title=delete_message

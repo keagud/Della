@@ -131,6 +131,9 @@ class CommandParser(metaclass=abc.ABCMeta):
             parent_id = first_slug_match
             remainder_tokens.remove(first_slug_match)
 
+        elif command is not None and remainder_tokens:
+            parent_id = remainder_tokens[0]
+
         return ParseResult(
             input_str, " ".join(remainder_tokens), command, date_match, parent_id
         )
@@ -154,6 +157,10 @@ class CommandParser(metaclass=abc.ABCMeta):
             return
 
         if command.lower() in ("del", "delete", "rm", "done", "d"):
+            if target_task == self.manager.root_task:
+                self.interface.alert("No task selected")
+                return None
+
             self.manager.delete_task(
                 target_task, warn_func=self.interface.confirm_delete
             )
@@ -165,6 +172,10 @@ class CommandParser(metaclass=abc.ABCMeta):
         if command.lower() in ("ls", "list", "show", "l"):
             self.list()
 
+            return None
+
+        if command.lower() in ("set", "move", "cd"):
+            self.task_env = target_task
             return None
 
         raise KeyError(f"@{command} is not a known command")
