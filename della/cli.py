@@ -10,7 +10,7 @@ from prompt_toolkit import HTML, PromptSession, print_formatted_text
 from prompt_toolkit.completion import FuzzyCompleter
 from prompt_toolkit.formatted_text import FormattedText
 
-from .command_parser import CommandParser
+from .command_parser import CommandParser, CommandsInterface
 from .completion import TaskCompleter
 from .constants import CONFIG_PATH, TASK_FILE_PATH
 from .debugging import debug
@@ -28,14 +28,35 @@ def make_cli_interface(normal_style: str, selected_style: str, title_style: str)
         selected_style=selected_style,
     )
 
-    def cli_alert(message: str) -> None:
-        print_formatted_text(FormattedText([(normal_style, message)]))
+    def cli_alert(message: str, style=normal_style) -> None:
+        print_formatted_text(FormattedText([(style, message)]))
 
     def cli_resolve_task(options: list[Task]) -> Task:
         alert_title = "Multiple matches!"
         " Input the number of the target, or anything else to cancel"
 
-        return chooser.getchoice([(t.path_str, t) for t in options], title=alert_title)
+        _, chosen = chooser.getchoice(
+            [(t.path_str, t) for t in options], title=alert_title
+        )
+        return chosen
+
+    def cli_confirm_delete(t: Task) -> bool:
+        delete_message = f"Really delete '{t.path_str}?'"
+
+        if t.subtasks:
+            delete_message += "\nIt has {len(t.subtasks)} subtasks"
+
+        _, chosen = chooser.getchoice(
+            [("yes", True), ("no", False)], title=delete_message
+        )
+        return chosen
+
+    def cli_resolve_sync() -> bool:
+        return True
+
+    return CommandsInterface(
+        cli_alert, cli_resolve_task, cli_confirm_delete, cli_resolve_sync
+    )
 
 
 def cli_alert(message: str) -> None:
@@ -86,6 +107,11 @@ def cli_resolve(tasks: list[Task], color="red"):
 class CLI_Parser(CommandParser):
     def __init__(
         self,
+        styling: dict = {
+            "normal_style": "skyblue",
+            "title_style": "skyblue bold",
+            "selected_style": "skyblue italic",
+        },
         filepath: str | Path = TASK_FILE_PATH,
         config_file: str | Path = CONFIG_PATH,
         named_days: Optional[dict[str, str]] = None,
@@ -93,12 +119,10 @@ class CLI_Parser(CommandParser):
         prompt_color: str = "skyblue",
     ) -> None:
         super().__init__(
+            make_cli_interface(**styling),
             filepath,
             config_file,
             named_days,
-            resolve_func=cli_resolve,
-            warn_func=cli_warn,
-            alert_func=cli_alert,
         )
 
         prompt_display = f"<{prompt_color}>{prompt_display}</{prompt_color}>"

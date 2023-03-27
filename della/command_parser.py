@@ -27,22 +27,21 @@ class CommandsInterface(NamedTuple):
     alert: Callable[[str], None]
     resolve_task: Callable[[list[Task]], Task]
     confirm_delete: Callable[[Task], bool]
-    resolve_sync: Callable[[None], bool]
+    resolve_sync: Callable[[], bool]
 
 
 class CommandParser(metaclass=abc.ABCMeta):
     def __init__(
         self,
+        interface: CommandsInterface,
         filepath: str | Path = TASK_FILE_PATH,
         config_path: str | Path = CONFIG_PATH,
         named_days: Optional[dict[str, str]] = None,
-        resolve_func: Optional[Callable[[list[Task]], Task]] = None,
-        warn_func: Optional[Callable[[Task], bool]] = None,
-        alert_func: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.date_parser = DateParser(named_days=named_days)
-        self.resolve_func = resolve_func
-        self.warn_func = warn_func
+
+        self.interface = interface
+
         self.config = DellaConfig.load(filepath=config_path)
 
         self.sync_manager: Optional[SyncManager] = None
@@ -50,10 +49,6 @@ class CommandParser(metaclass=abc.ABCMeta):
         if self.config.use_remote and self.config.sync_config is not None:
             self.sync_manager = SyncManager(self.config)
 
-        if not alert_func:
-            self.alert_func = lambda *args, **kwargs: None
-        else:
-            self.alert_func = alert_func
         self.filepath = Path(filepath).expanduser().resolve()
 
         if not self.filepath.exists():
@@ -85,8 +80,6 @@ class CommandParser(metaclass=abc.ABCMeta):
             self.sync_manager.push_and_update()
 
     def resolve_keyword(self, input_keyword: str) -> Task:
-        assert self.resolve_func is not None
-
         options = self.manager.search(input_keyword)
 
         if not options:
@@ -95,7 +88,7 @@ class CommandParser(metaclass=abc.ABCMeta):
         located_task = options[0]
 
         if len(options) > 1:
-            located_task = self.resolve_func(options)
+            located_task = self.interface.resolve_task(options)
 
         return located_task
 
@@ -157,11 +150,13 @@ class CommandParser(metaclass=abc.ABCMeta):
         if not command:
             new_task = self.manager.add_task(content, target_task, task_date)
             self.manager.reindex()
-            self.alert_func(f"Added task: {new_task.path_str}")
+            self.interface.alert(f"Added task: {new_task.path_str}")
             return
 
         if command.lower() in ("del", "delete", "rm", "done", "d"):
-            self.manager.delete_task(target_task, warn_func=self.warn_func)
+            self.manager.delete_task(
+                target_task, warn_func=self.interface.confirm_delete
+            )
             return None
 
         if command.lower() in ("q", "quit", "exit"):
