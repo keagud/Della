@@ -59,7 +59,7 @@ class CommandParser(metaclass=abc.ABCMeta):
 
         self.task_env: Task = self.manager.root_task
 
-    def list(self):
+    def list(self, root_task: Optional[Task] = None):
         raise NotImplementedError
 
     def prompt(self, *args, **kwargs):
@@ -100,13 +100,13 @@ class CommandParser(metaclass=abc.ABCMeta):
         if not path_tokens:
             raise ValueError
 
-        task_start = self.manager.root_task
+        task_start = self.task_env
 
         if path_tokens[0].startswith("#"):
             task_start = self.resolve_keyword(path_tokens[0].strip("#"))
             path_tokens = path_tokens[1:]
 
-        resolved_path = task_start.path_str + "/".join(path_tokens)
+        resolved_path = "/".join([t.slug for t in task_start.full_path] + path_tokens)
 
         return task_index[resolved_path]
 
@@ -156,6 +156,11 @@ class CommandParser(metaclass=abc.ABCMeta):
             self.interface.alert(f"Added task: {new_task.path_str}")
             return
 
+        if command.lower() in ("home", "h"):
+            self.task_env = self.manager.root_task
+            self.interface.alert("Set context to root")
+            return None
+
         if command.lower() in ("del", "delete", "rm", "done", "d"):
             if target_task == self.manager.root_task:
                 self.interface.alert("No task selected")
@@ -170,12 +175,12 @@ class CommandParser(metaclass=abc.ABCMeta):
             sys.exit(0)
 
         if command.lower() in ("ls", "list", "show", "l"):
-            self.list()
-
+            self.list(root_task=target_task)
             return None
 
         if command.lower() in ("set", "move", "cd"):
             self.task_env = target_task
+            self.interface.alert(f"Set the current context to {target_task.path_str}")
             return None
 
         raise KeyError(f"@{command} is not a known command")

@@ -162,7 +162,7 @@ class CLI_Parser(CommandParser):
         if not root_task.subtasks:
             return ["No Tasks"]
 
-        return self.format_subtasks(self.manager.root_task)
+        return self.format_subtasks(root_task)
 
     def list(self, root_task: Task | None = None):
         formatted = "\n".join(self.format_tasks(root_task=root_task))
