@@ -1,5 +1,6 @@
 from collections import deque
-from typing import Any, Iterable, Optional, cast
+from functools import reduce
+from typing import Any, Callable, Iterable, Optional, cast
 
 import dateparse
 from prompt_toolkit.completion import (
@@ -16,7 +17,37 @@ from prompt_toolkit.layout.processors import (
     TransformationInput,
 )
 
-from .task import Task
+from .constants import COMMAND_ALIASES
+from .task import Task, TaskManager
+
+
+def style_token(
+    fragments: StyleAndTextTuples,
+    test_func: Callable[[str], tuple[int, int] | None],
+    style_apply: str,
+) -> StyleAndTextTuples:
+    fragments_tuples = cast(list[tuple[str, str]], fragments)
+
+    for i, tup in enumerate(fragments_tuples):
+        style, text = tup
+        if (func_result := test_func(text)) is None:
+            continue
+
+        start, end = func_result
+
+        split_fragments = [
+            (style, text[:start]),
+            (style_apply, text[start:end]),
+            (style, text[end:]),
+        ]
+
+        fragments_tuples[i] = split_fragments[0]
+
+        fragments_tuples.insert(i + 1, split_fragments[1])
+        fragments_tuples.insert(i + 2, split_fragments[2])
+        break
+
+    return cast(StyleAndTextTuples, fragments_tuples)
 
 
 class DateProcessor(Processor):
@@ -24,28 +55,86 @@ class DateProcessor(Processor):
         self.parser = date_parser
         super().__init__(*args, **kwargs)
 
+    def find_date(self, text: str) -> tuple[int, int] | None:
+        parse_result = self.parser.get_last(text)
+
+        if parse_result is None:
+            return None
+
+        return (parse_result.start, parse_result.end)
+
     def apply_transformation(
         self, transformation_input: TransformationInput
     ) -> Transformation:
-        input_text = transformation_input.document.text
+        fragments = style_token(transformation_input.fragments, self.find_date, "red")
 
-        parse_result = self.parser.get_last(input_text)
+        return Transformation(fragments)
 
-        if parse_result is not None:
-            date_start = parse_result.start
-            date_end = parse_result.end
 
-            fragments = cast(
-                StyleAndTextTuples,
-                [
-                    ("", input_text[:date_start]),
-                    ("red", input_text[date_start:date_end]),
-                    ("", input_text[date_end:]),
-                ],
-            )
+class CommandProcessor(Processor):
+    def __init__(self, *args, **kwargs) -> None:
+        self.commands: frozenset[str] = frozenset(
+            reduce(lambda s, n: s | n, COMMAND_ALIASES.values())
+        )
+        super().__init__(*args, **kwargs)
 
-        else:
-            fragments = transformation_input.fragments
+    def find_command(self, text: str) -> tuple[int, int] | None:
+        prefix_index = text.find("@")
+
+        if prefix_index < 0:
+            return None
+
+        command_token = text[prefix_index:].split()[0]
+
+        if command_token.strip("@").lower() not in self.commands:
+            return None
+
+        end_index = prefix_index + len(command_token)
+
+        return (prefix_index, end_index)
+
+    def apply_transformation(
+        self, transformation_input: TransformationInput
+    ) -> Transformation:
+        fragments = style_token(
+            transformation_input.fragments, self.find_command, "orange"
+        )
+
+        return Transformation(fragments)
+
+
+class TaskProcessor(Processor):
+    def __init__(self, manager: TaskManager, *args, **kwargs) -> None:
+        self.manager = manager
+        super().__init__(*args, **kwargs)
+
+    def find_task_path(self, text: str) -> tuple[int, int] | None:
+        path = None
+
+        for token in text.split():
+            if token.startswith("#"):
+                path = token
+                break
+
+        if path is None:
+            return None
+
+        result = self.manager.task_from_path(path)
+
+        if result is None:
+            return None
+
+        start_index = text.index(path)
+        end_index = start_index + len(path)
+
+        return (start_index, end_index)
+
+    def apply_transformation(
+        self, transformation_input: TransformationInput
+    ) -> Transformation:
+        fragments = style_token(
+            transformation_input.fragments, self.find_task_path, "pink"
+        )
 
         return Transformation(fragments)
 

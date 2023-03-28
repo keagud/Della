@@ -12,7 +12,7 @@ from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.layout.processors import Processor
 
 from .command_parser import CommandParser, CommandsInterface
-from .completion import DateProcessor, TaskCompleter
+from .completion import CommandProcessor, DateProcessor, TaskCompleter, TaskProcessor
 from .constants import CONFIG_PATH, TASK_FILE_PATH
 from .task import Task, TaskException
 
@@ -79,7 +79,11 @@ class CLI_Parser(CommandParser):
             named_days,
         )
 
-        self.processors: list[Processor] = [DateProcessor(self.date_parser)]
+        self.processors: list[Processor] = [
+            DateProcessor(self.date_parser),
+            CommandProcessor(),
+            TaskProcessor(self.manager),
+        ]
 
         prompt_display = f"<{prompt_color}>{prompt_display}</{prompt_color}>"
         self.session = PromptSession(

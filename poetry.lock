@@ -602,14 +602,14 @@ tox = ["tox"]
 
 [[package]]
 name = "dateparse"
-version = "1.0.1"
+version = "1.1.0"
 description = "A pure Python library for parsing natural language time expressions, with minimal dependencies"
 category = "main"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "dateparse-1.0.1-py3-none-any.whl", hash = "sha256:5183edaeb0e4d920326532c3692d78d68c7effce5c7b45fb6f77f6639c4029b5"},
-    {file = "dateparse-1.0.1.tar.gz", hash = "sha256:410d9e30dc0026433bf978fcf7933acdb3630386b38a1475633180d9ee7a61e6"},
+    {file = "dateparse-1.1.0-py3-none-any.whl", hash = "sha256:d2fba10d9727f4d4563a0e94427b213714356102d815e93760c08fa3418a6190"},
+    {file = "dateparse-1.1.0.tar.gz", hash = "sha256:b521d59ff44a158128b4ac87a77f2d5695ee2d010d76709cb34fbc5935f3644b"},
 ]
 
 [package.dependencies]
@@ -806,14 +806,14 @@ files = [
 
 [[package]]
 name = "getchoice"
-version = "1.0.1"
+version = "1.1.0"
 description = "Simple, extensible user selection interface for CLI applications"
 category = "main"
 optional = false
 python-versions = ">=3.8,<4"
 files = [
-    {file = "getchoice-1.0.1-py3-none-any.whl", hash = "sha256:457626bcc563efe62f18cda2f335a9e692c1ee202e62ae813cdfc3f9a6305dc2"},
-    {file = "getchoice-1.0.1.tar.gz", hash = "sha256:e252ca25a1e2313e0f2795f1365b4a7c905d0a0e8b94ac4c141526b9ce8e9d4c"},
+    {file = "getchoice-1.1.0-py3-none-any.whl", hash = "sha256:80838bcc5ed0dd2a150d458c367f16d574b082f04a768ef718be29b4a466e5b3"},
+    {file = "getchoice-1.1.0.tar.gz", hash = "sha256:f4a244df89b3e68a960557d08285a9b09dca98e2d1c3600385b2e840d1e5994e"},
 ]
 
 [package.dependencies]
@@ -1892,14 +1892,14 @@ files = [
 
 [[package]]
 name = "setuptools"
-version = "67.6.0"
+version = "67.6.1"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "setuptools-67.6.0-py3-none-any.whl", hash = "sha256:b78aaa36f6b90a074c1fa651168723acbf45d14cb1196b6f02c0fd07f17623b2"},
-    {file = "setuptools-67.6.0.tar.gz", hash = "sha256:2ee892cd5f29f3373097f5a814697e397cf3ce313616df0af11231e2ad118077"},
+    {file = "setuptools-67.6.1-py3-none-any.whl", hash = "sha256:e728ca814a823bf7bf60162daf9db95b93d532948c4c0bea762ce62f60189078"},
+    {file = "setuptools-67.6.1.tar.gz", hash = "sha256:257de92a9d50a60b8e22abfcbb771571fde0dbf3ec234463212027a4eeecbe9a"},
 ]
 
 [package.extras]

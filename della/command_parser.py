@@ -100,24 +100,6 @@ class CommandParser(metaclass=abc.ABCMeta):
 
         return located_task
 
-    def task_from_path(self, input_str: str):
-        task_index = self.manager.tasks_index
-
-        path_tokens = input_str.split("/")
-
-        if not path_tokens:
-            raise ValueError
-
-        task_start = self.task_env
-
-        if path_tokens[0].startswith("#"):
-            task_start = self.resolve_keyword(path_tokens[0].strip("#"))
-            path_tokens = path_tokens[1:]
-
-        resolved_path = "/".join([t.slug for t in task_start.full_path] + path_tokens)
-
-        return task_index[resolved_path]
-
     def parse_input(self, input_str: str):
         date_match = self.date_parser.get_last(input_str)
 
@@ -154,7 +136,12 @@ class CommandParser(metaclass=abc.ABCMeta):
             target_task = self.task_env
 
         else:
-            target_task = self.task_from_path(parent_id)
+            target_task = self.manager.task_from_path(
+                parent_id, resolve_func=self.interface.resolve_task
+            )
+
+        if target_task is None:
+            raise TaskException("Could not resolve task")
 
         task_date = date_result.date if date_result is not None else None
 

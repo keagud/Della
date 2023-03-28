@@ -231,8 +231,6 @@ class TaskManager:
         return new_manager
 
     def reindex(self):
-        #        import ipdb; ipdb.set_trace()
-
         self.tasks_index.clear()
         for task in self:
             path_str: str = task.path_str
@@ -272,6 +270,40 @@ class TaskManager:
                 search_queue.extendleft(t.subtasks)
 
         return found
+
+    def task_from_path(
+        self, input_str: str, resolve_func: Optional[Callable] = None
+    ) -> Task | None:
+        task_index = self.tasks_index
+
+        task_start = self.root_task
+
+        path_tokens = input_str.split("/")
+
+        if not path_tokens:
+            raise ValueError
+
+        initial_token = path_tokens[0]
+
+        if initial_token.startswith("#") and len(initial_token) > 1:
+            task_start_options = self.search(initial_token.strip("#"))
+
+            if not task_start_options:
+                return None
+
+            if len(task_start_options) > 1:
+                if resolve_func is not None:
+                    task_start = resolve_func(task_start_options)
+                else:
+                    return None
+
+            task_start = task_start_options[0]
+
+            path_tokens = path_tokens[1:]
+
+        resolved_path = "/".join([t.slug for t in task_start.full_path] + path_tokens)
+
+        return task_index.get(resolved_path)
 
     def delete_task(
         self, task: Task, warn_func: Optional[Callable[[Task], bool]] = None
