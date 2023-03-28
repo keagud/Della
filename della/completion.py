@@ -1,6 +1,7 @@
 from collections import deque
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, cast
 
+import dateparse
 from prompt_toolkit.completion import (
     CompleteEvent,
     Completer,
@@ -8,9 +9,45 @@ from prompt_toolkit.completion import (
     DummyCompleter,
 )
 from prompt_toolkit.document import Document
-from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.formatted_text import FormattedText, StyleAndTextTuples
+from prompt_toolkit.layout.processors import (
+    Processor,
+    Transformation,
+    TransformationInput,
+)
 
 from .task import Task
+
+
+class DateProcessor(Processor):
+    def __init__(self, date_parser: dateparse.DateParser, *args, **kwargs) -> None:
+        self.parser = date_parser
+        super().__init__(*args, **kwargs)
+
+    def apply_transformation(
+        self, transformation_input: TransformationInput
+    ) -> Transformation:
+        input_text = transformation_input.document.text
+
+        parse_result = self.parser.get_last(input_text)
+
+        if parse_result is not None:
+            date_start = parse_result.start
+            date_end = parse_result.end
+
+            fragments = cast(
+                StyleAndTextTuples,
+                [
+                    ("", input_text[:date_start]),
+                    ("red", input_text[date_start:date_end]),
+                    ("", input_text[date_end:]),
+                ],
+            )
+
+        else:
+            fragments = transformation_input.fragments
+
+        return Transformation(fragments)
 
 
 def null_complete_closure():

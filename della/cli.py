@@ -3,54 +3,18 @@ from itertools import cycle
 from pathlib import Path
 from shutil import get_terminal_size
 from signal import SIGINT, signal
-from typing import Optional, cast
+from typing import Optional
 
-import dateparse
 from getchoice import ChoicePrinter
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
 from prompt_toolkit.completion import FuzzyCompleter
-from prompt_toolkit.formatted_text import FormattedText, StyleAndTextTuples
-from prompt_toolkit.layout.processors import (
-    Processor,
-    Transformation,
-    TransformationInput,
-)
+from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.layout.processors import Processor
 
 from .command_parser import CommandParser, CommandsInterface
-from .completion import TaskCompleter
+from .completion import DateProcessor, TaskCompleter
 from .constants import CONFIG_PATH, TASK_FILE_PATH
-from .task import Task
-
-
-class DateProcessor(Processor):
-    def __init__(self, date_parser: dateparse.DateParser, *args, **kwargs) -> None:
-        self.parser = date_parser
-        super().__init__(*args, **kwargs)
-
-    def apply_transformation(
-        self, transformation_input: TransformationInput
-    ) -> Transformation:
-        input_text = transformation_input.document.text
-
-        parse_result = self.parser.get_last(input_text)
-
-        if parse_result is not None:
-            date_start = parse_result.start
-            date_end = parse_result.end
-
-            fragments = cast(
-                StyleAndTextTuples,
-                [
-                    ("", input_text[:date_start]),
-                    ("red", input_text[date_start:date_end]),
-                    ("", input_text[date_end:]),
-                ],
-            )
-
-        else:
-            fragments = transformation_input.fragments
-
-        return Transformation(fragments)
+from .task import Task, TaskException
 
 
 def make_cli_interface(normal_style: str, selected_style: str, title_style: str):
@@ -240,12 +204,16 @@ class CLI_Parser(CommandParser):
 
 def start_cli_prompt(*args, **kwargs):
     with CLI_Parser() as cli_prompt:
-        try:
-            while True:
+        while True:
+            try:
                 cli_prompt.prompt()
 
-        except KeyboardInterrupt:
-            sys.exit(0)
+            except TaskException as e:
+                cli_prompt.interface.alert(str(e))
+                continue
 
-        except EOFError:
-            sys.exit(0)
+            except KeyboardInterrupt:
+                sys.exit(0)
+
+            except EOFError:
+                sys.exit(0)

@@ -10,9 +10,9 @@ from typing import Callable, NamedTuple, Optional
 from dateparse import DateParser
 from dateparse.parseutil import DateResult
 
-from .constants import CONFIG_PATH, TASK_FILE_PATH
+from .constants import COMMAND_ALIASES, CONFIG_PATH, TASK_FILE_PATH
 from .init_tasks import DellaConfig, SyncManager
-from .task import Task, TaskManager
+from .task import Task, TaskException, TaskManager
 
 
 class ParseResult(NamedTuple):
@@ -28,6 +28,14 @@ class CommandsInterface(NamedTuple):
     resolve_task: Callable[[list[Task]], Task]
     confirm_delete: Callable[[Task], bool]
     resolve_sync: Callable[[], bool]
+
+
+def resolve_alias(input_command: str):
+    for command, aliases in COMMAND_ALIASES.items():
+        if input_command.lower() in aliases:
+            return command
+
+    raise TaskException(f"No command matching '{input_command}' could be resolved")
 
 
 class CommandParser(metaclass=abc.ABCMeta):
@@ -83,7 +91,7 @@ class CommandParser(metaclass=abc.ABCMeta):
         options = self.manager.search(input_keyword)
 
         if not options:
-            raise KeyError(f"'{input_keyword}' does not point to a valid task")
+            raise TaskException(f"'{input_keyword}' does not point to a valid task")
 
         located_task = options[0]
 
@@ -156,34 +164,32 @@ class CommandParser(metaclass=abc.ABCMeta):
             self.interface.alert(f"Added task: {new_task.path_str}")
             return
 
-        if command.lower() in ("home", "h"):
-            self.task_env = self.manager.root_task
-            self.interface.alert("Set context to root")
-            return None
+        matched_command = resolve_alias(command)
 
-        if command.lower() in ("del", "delete", "rm", "done", "d"):
-            if target_task == self.manager.root_task:
-                self.interface.alert("No task selected")
-                return None
+        match matched_command:
+            case "home":
+                self.task_env = self.manager.root_task
+                self.interface.alert("Set context to root")
 
-            self.manager.delete_task(
-                target_task, warn_func=self.interface.confirm_delete
-            )
-            return None
+            case "delete":
+                if target_task == self.manager.root_task:
+                    raise TaskException("No task specified to delete")
 
-        if command.lower() in ("q", "quit", "exit"):
-            sys.exit(0)
+                self.manager.delete_task(
+                    target_task, warn_func=self.interface.confirm_delete
+                )
 
-        if command.lower() in ("ls", "list", "show", "l"):
-            self.list(root_task=target_task)
-            return None
+            case "quit":
+                sys.exit(0)
 
-        if command.lower() in ("set", "move", "cd"):
-            self.task_env = target_task
-            self.interface.alert(f"Set the current context to {target_task.path_str}")
-            return None
+            case "list":
+                self.list(root_task=target_task)
 
-        raise KeyError(f"@{command} is not a known command")
+            case "set":
+                self.task_env = target_task
+                self.interface.alert(
+                    f"Set the current context to {target_task.path_str}"
+                )
 
     def from_prompt(self, input_prompt: str):
         result = self.parse_input(input_prompt)

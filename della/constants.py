@@ -11,3 +11,20 @@ CONFIG_PATH: Final = resolve_path("~/.config/della/config.toml")
 TASK_FILE_PATH: Final = Path("~/.local/della/tasks.toml")
 
 TMP_SYNCFILE: Final = "tmp_tasks.toml"
+
+
+_commands = {
+    "list": ["ls"],
+    "delete": [
+        "del",
+        "rm",
+    ],
+    "set": ["cd"],
+    "home": ["h"],
+    "quit": ["q"],
+}
+
+
+COMMAND_ALIASES: Final = {
+    command: frozenset(aliases + [command]) for command, aliases in _commands.items()
+}

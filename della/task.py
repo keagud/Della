@@ -15,6 +15,15 @@ import toml
 from slugify import slugify
 
 
+class TaskException(KeyError):
+    def __init__(self, message, *args, **kwargs) -> None:
+        self.message = str(message)
+        super().__init__(message, *args, **kwargs)
+
+    def __str__(self):
+        return self.message
+
+
 class Task:
     def __init__(
         self,
@@ -23,7 +32,7 @@ class Task:
         due_date: Optional[DateType] = None,
     ) -> None:
         if not content:
-            raise ValueError("A task cannot be empty")
+            raise TaskException("A task cannot be empty")
 
         self.content = content
         self.due_date = due_date
@@ -229,7 +238,7 @@ class TaskManager:
             path_str: str = task.path_str
             if path_str in self.tasks_index and self.tasks_index[path_str] != task:
                 self.delete_task(task)
-                raise KeyError(f"{path_str} already present")
+                raise TaskException(f"{path_str} already present")
             self.tasks_index[path_str] = task
 
             self._set_task_format(task)
