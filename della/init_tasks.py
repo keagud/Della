@@ -76,6 +76,7 @@ class DellaConfig:
     def __post_init__(self):
         remote_options = self.init_dict["remote"]
         local_options = self.init_dict["local"]
+        self.styles = self.init_dict["style"]
 
         self.config_filepath = Path(self.init_config_filepath).expanduser().resolve()
 
