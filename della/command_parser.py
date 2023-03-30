@@ -74,7 +74,6 @@ class CommandParser(metaclass=abc.ABCMeta):
 
     def __enter__(self, *args, **kwargs):
         if self.config.use_remote and self.sync_manager is not None:
-            self.interface.alert("fetching from remote...")
             self.sync_manager.pull_and_update()
         return self
 
@@ -83,7 +82,6 @@ class CommandParser(metaclass=abc.ABCMeta):
             self.manager.serialize(taskfile)
 
         if self.config.use_remote and self.sync_manager is not None:
-            self.interface.alert("pushing to remote...")
             self.sync_manager.push_and_update()
 
     def resolve_keyword(self, input_keyword: str) -> Task:

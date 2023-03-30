@@ -6,6 +6,7 @@ from signal import SIGINT, signal
 from typing import Optional
 
 from getchoice import ChoicePrinter
+from halo import Halo
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
 from prompt_toolkit.completion import FuzzyCompleter
 from prompt_toolkit.formatted_text import FormattedText
@@ -195,9 +196,22 @@ class CLI_Parser(CommandParser):
             )
         )
 
-    def ___enter__(self, *args, **kwargs):
+    def __enter__(self, *args, **kwargs):
         signal(SIGINT, self._sigint_handler)
-        return super().__enter__()
+
+        if not self.config.use_remote:
+            super().__enter__()
+            return self
+
+        with Halo(text="Loading from remote", spinner="bouncingBar"):
+            return super().__enter__()
+
+    def __exit__(self, *args, **kwargs):
+        if not self.config.use_remote:
+            super().__exit__()
+
+        with Halo(text="Syncing with remote", spinner="bouncingBar"):
+            super().__exit__()
 
     def _sigint_handler(self, signal_received, frame):
         self.__exit__(None, None, None)
