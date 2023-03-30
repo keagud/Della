@@ -25,20 +25,15 @@ packages = [
 python = ">=3.10,<4"
 dateparse = "^1.0.0"
 toml = "^0.10.2"
-textual = {extras = ["dev"], version = "^0.13.0"}
 python-slugify = "^8.0.1"
 prompt-toolkit = "^3.0.38"
 argparse = "^1.4.0"
-fabric = "^3.0.0"
-ping3 = "^4.0.4"
 getchoice = "*"
 
 [tool.poetry.group.dev.dependencies]
-coverage = "*"
 isort = "*"
 pyright = "*"
 ruff = "*"
-pytest = ">=7.2.0"
 pre-commit = "*"
 black = "*"
 ipython = "^8.11.0"
@@ -46,6 +41,7 @@ ipdb = "^0.13.11"
 
 
 [tool.poetry.group.test.dependencies]
+coverage = "*"
 pytest = "^7.2.2"
 mock = "^5.0.1"
 pytest-mock = "^3.10.0"

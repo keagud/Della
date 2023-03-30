@@ -1,11 +1,12 @@
 import os
 import shutil
 import subprocess
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, NamedTuple, Optional
 
-import fabric
+import paramiko
 import toml
 
 from .constants import CONFIG_PATH, REMOTE_PATH, TMP_SYNCFILE
@@ -103,11 +104,9 @@ class DellaConfig:
             raise ValueError
 
         return {
-            "host": self.sync_config.address,
-            "user": self.sync_config.user,
-            "connect_kwargs": {
-                "key_filename": self.sync_config.private_key_location.as_posix()
-            },
+            "hostname": self.sync_config.address,
+            "username": self.sync_config.user,
+            "key_filename": self.sync_config.private_key_location.as_posix(),
         }
 
     @property
@@ -148,26 +147,37 @@ class SyncManager:
             ["ping", self.sync_config.address, f"-c {count}"]
         ).check_returncode()
 
+    @contextmanager
+    def get_connection(self):
+        try:
+            connect_client = paramiko.SSHClient()
+            connect_client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+            connect_client.connect(**self.config.connect_args)
+            yield connect_client.open_sftp()
+
+        finally:
+            connect_client.close()
+
     def get_most_recent(self):
         return self.compare_file_versions(
             local=self.config.task_file_local, remote=self.tmp_syncfile
         )
 
-    def fetch_remote(self, connection: fabric.Connection):
+    def fetch_remote(self, connection: paramiko.SFTPClient):
         self.config.task_file_local.parent.mkdir(exist_ok=True, parents=True)
         connection.get(
-            self.sync_config.task_file_remote.as_posix(),
-            local=self.tmp_syncfile.as_posix(),
+            remotepath=self.sync_config.task_file_remote.as_posix(),
+            localpath=self.tmp_syncfile.as_posix(),
         )
 
-    def push_remote(self, connection: fabric.Connection) -> None:
+    def push_remote(self, connection: paramiko.SFTPClient) -> None:
         connection.put(
-            self.config.task_file_local.as_posix(),
-            remote=self.sync_config.task_file_remote.as_posix(),
+            localpath=self.config.task_file_local.as_posix(),
+            remotepath=self.sync_config.task_file_remote.as_posix(),
         )
 
     def pull_and_update(self) -> None:
-        with fabric.Connection(**self.config.connect_args) as connection:
+        with self.get_connection() as connection:
             self.fetch_remote(connection)
 
         if self.get_most_recent() == self.config.task_file_local:
@@ -181,7 +191,7 @@ class SyncManager:
         shutil.move(self.tmp_syncfile, self.config.task_file_local)
 
     def push_and_update(self) -> None:
-        with fabric.Connection(**self.config.connect_args) as connection:
+        with self.get_connection() as connection:
             try:
                 self.fetch_remote(connection)
             except FileNotFoundError:
