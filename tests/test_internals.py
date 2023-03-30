@@ -1,5 +1,4 @@
 from pathlib import Path
-from pprint import pprint
 from shutil import copy
 
 import pytest
@@ -31,6 +30,8 @@ def mock_task_file(tmp_path: Path):
     yield mock_task_path
 
 
-def test_setup(mock_config_file):
+def test_setup(mock_config_file, capsys):
     with cli.CLI_Parser(config_file=mock_config_file) as c:
-        pprint(c.config)
+        c.from_prompt("@ls")
+        output = capsys.readouterr()
+        assert output.out.strip() == "No Tasks"

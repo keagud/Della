@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from pprint import pprint
 from typing import Callable, NamedTuple, Optional
 
 from dateparse import DateParser
@@ -51,8 +50,6 @@ class CommandParser(metaclass=abc.ABCMeta):
         self.interface = interface
 
         self.config = DellaConfig.load(config_path)
-
-        pprint(self.config)
 
         self.sync_manager: Optional[SyncManager] = None
 
