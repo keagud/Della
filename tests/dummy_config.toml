@@ -1,0 +1,33 @@
+[local]
+task_file_local = "NONE"
+# TODO other local options go here
+
+[remote]
+use_remote = false
+
+
+[style]
+[[style.tasks_display]]
+fg = "#679436"
+
+[[style.tasks_display]]
+fg = "#ADB6C4"
+
+[[style.tasks_display]]
+fg = "#294C60"
+
+[style.normal]
+fg = "#ADB6C4"
+
+[style.alert]
+fg = "#6E0D25"
+
+[style.highlight.command]
+fg = "#E55934"
+
+[style.highlight.date]
+fg = "#ADB6C4"
+bg = "#6E0D25"
+
+[style.highlight.task]
+fg = "#FFC49B"

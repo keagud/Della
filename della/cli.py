@@ -13,7 +13,7 @@ from prompt_toolkit.layout.processors import Processor
 
 from .command_parser import CommandParser, CommandsInterface
 from .completion import CommandProcessor, DateProcessor, TaskCompleter, TaskProcessor
-from .constants import CONFIG_PATH, TASK_FILE_PATH
+from .constants import CONFIG_PATH
 from .task import Task, TaskException
 
 
@@ -63,7 +63,6 @@ class CLI_Parser(CommandParser):
             "title_style": "skyblue bold",
             "selected_style": "skyblue italic",
         },
-        filepath: str | Path = TASK_FILE_PATH,
         config_file: str | Path = CONFIG_PATH,
         named_days: Optional[dict[str, str]] = None,
         prompt_display: str = "=> ",
@@ -74,7 +73,6 @@ class CLI_Parser(CommandParser):
 
         super().__init__(
             make_cli_interface(**styling),
-            filepath,
             config_file,
             named_days,
         )

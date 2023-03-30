@@ -8,7 +8,7 @@ from typing import Any, Callable, NamedTuple, Optional
 import fabric
 import toml
 
-from .constants import CONFIG_PATH, REMOTE_PATH, TASK_FILE_PATH, TMP_SYNCFILE
+from .constants import CONFIG_PATH, REMOTE_PATH, TMP_SYNCFILE
 
 
 class SyncConfig(NamedTuple):
@@ -43,7 +43,7 @@ class DellaConfig:
     @classmethod
     def default(cls):
         default_config = {
-            "local": {"tasks_file_local": TASK_FILE_PATH},
+            "local": {"tasks_file_local": "~/.local/della/tasks.toml"},
             "remote": {"use_remote": False, "tasks_file_remote": REMOTE_PATH},
         }
 
@@ -226,13 +226,3 @@ class SyncManager:
         remote_timestamp = self.get_file_timestamp(remote)
 
         return local if local_timestamp > remote_timestamp else remote
-
-
-def main():
-    sm = SyncManager()
-    sm.pull_and_update()
-    sm.push_and_update()
-
-
-if __name__ == "__main__":
-    main()

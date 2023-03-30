@@ -5,12 +5,13 @@ import logging
 import os
 import sys
 from pathlib import Path
+from pprint import pprint
 from typing import Callable, NamedTuple, Optional
 
 from dateparse import DateParser
 from dateparse.parseutil import DateResult
 
-from .constants import COMMAND_ALIASES, CONFIG_PATH, TASK_FILE_PATH
+from .constants import COMMAND_ALIASES, CONFIG_PATH
 from .init_tasks import DellaConfig, SyncManager
 from .task import Task, TaskException, TaskManager
 
@@ -42,7 +43,6 @@ class CommandParser(metaclass=abc.ABCMeta):
     def __init__(
         self,
         interface: CommandsInterface,
-        filepath: str | Path = TASK_FILE_PATH,
         config_path: str | Path = CONFIG_PATH,
         named_days: Optional[dict[str, str]] = None,
     ) -> None:
@@ -50,20 +50,22 @@ class CommandParser(metaclass=abc.ABCMeta):
 
         self.interface = interface
 
-        self.config = DellaConfig.load(filepath=config_path)
+        self.config = DellaConfig.load(config_path)
+
+        pprint(self.config)
 
         self.sync_manager: Optional[SyncManager] = None
 
         if self.config.use_remote and self.config.sync_config is not None:
             self.sync_manager = SyncManager(self.config)
 
-        self.filepath = Path(filepath).expanduser().resolve()
+        self.filepath = Path(self.config.task_file_local).expanduser().resolve()
 
         if not self.filepath.exists():
             os.makedirs(self.filepath.parent, exist_ok=True)
             self.filepath.touch(exist_ok=True)
 
-        self.manager = TaskManager.deserialize(filepath)
+        self.manager = TaskManager.deserialize(self.filepath)
 
         self.task_env: Task = self.manager.root_task
 

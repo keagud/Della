@@ -48,6 +48,7 @@ ipdb = "^0.13.11"
 [tool.poetry.group.test.dependencies]
 pytest = "^7.2.2"
 mock = "^5.0.1"
+pytest-mock = "^3.10.0"
 
 [tool.poetry.scripts]
 della = 'della.della:run'
