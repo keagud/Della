@@ -31,8 +31,7 @@ def make_cli_interface(styling: Style):
         print_formatted_text(HTML(_format_tag(message, "alert")), style=styling)
 
     def cli_resolve_task(options: list[Task]) -> Task:
-        alert_title = "Multiple matches!"
-        " Input the number of the target, or anything else to cancel"
+        alert_title = "Multiple matches! Which did you mean?"
 
         _, chosen = chooser.getchoice(
             [(t.path_str, t) for t in options], title=alert_title
@@ -64,10 +63,11 @@ class CLI_Parser(CommandParser):
         named_days: Optional[dict[str, str]] = None,
         prompt_display: str = "=> ",
         prompt_color: str = "ansicyan",
+        followup_prompt: str = ">> ",
     ) -> None:
         self.prompt_display = prompt_display
         self.prompt_color = prompt_color
-
+        self.followup_prompt = followup_prompt
         self.config = DellaConfig.load(config_file)
 
         super().__init__(
@@ -91,14 +91,14 @@ class CLI_Parser(CommandParser):
         )
         self.indent = " "
 
-    def make_prompt_display(self):
+    def make_prompt_display(self, followup: bool = False):
         elements = ""
+
+        display = self.prompt_display if not followup else self.followup_prompt
         if self.task_env != self.manager.root_task:
             elements = "/".join(t.slug for t in self.task_env.full_path[-3:]) + "|"
 
-        return HTML(
-            f"<{self.prompt_color}>{elements}{self.prompt_display}</{self.prompt_color}>"
-        )
+        return HTML(f"<{self.prompt_color}>{elements}{display}</{self.prompt_color}>")
 
     def update_completions(self):
         task_completer = TaskCompleter.from_tasks(self.manager.root_task)
@@ -169,14 +169,15 @@ class CLI_Parser(CommandParser):
         formatted = merge_formatted_text(self.format_tasks(root_task=root_task))
         print_formatted_text(formatted, style=self.config.style)
 
-    def prompt(self):
-        self.from_prompt(
-            self.session.prompt(
-                self.make_prompt_display(),
-                completer=self.update_completions(),
-                input_processors=self.processors,
-            )
+    def query(self, followup: bool = False) -> str:
+        return self.session.prompt(
+            self.make_prompt_display(followup=followup),
+            completer=self.update_completions(),
+            input_processors=self.processors,
         )
+
+    def prompt(self):
+        self.from_prompt(self.query())
 
     def __enter__(self, *args, **kwargs):
         signal(SIGINT, self._sigint_handler)

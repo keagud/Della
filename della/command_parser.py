@@ -28,6 +28,7 @@ class CommandsInterface(NamedTuple):
     resolve_task: Callable[[list[Task]], Task]
     confirm_delete: Callable[[Task], bool]
     resolve_sync: Callable[[], bool]
+    query_input: Optional[Callable[[], str]] = None
 
 
 def resolve_alias(input_command: str):
@@ -97,7 +98,10 @@ class CommandParser(metaclass=abc.ABCMeta):
 
         return located_task
 
-    def parse_input(self, input_str: str):
+    def query(self, followup: bool = False) -> str:
+        raise NotImplementedError
+
+    def parse_input(self, input_str: str) -> ParseResult:
         date_match = self.date_parser.get_last(input_str)
 
         remainder = input_str[: date_match.start] if date_match else input_str
@@ -174,6 +178,28 @@ class CommandParser(metaclass=abc.ABCMeta):
                 self.interface.alert(
                     f"Set the current context to {target_task.path_str}"
                 )
+
+            case "move":
+                self.interface.alert(
+                    f"Enter a new parent task for '{target_task.slug}':"
+                )
+                user_reply = self.parse_input(self.query(followup=True))
+                target_id = user_reply.parent_identifier
+
+                try:
+                    assert target_id is not None
+
+                    new_parent = self.manager.task_from_path(
+                        target_id, resolve_func=self.interface.resolve_task
+                    )
+
+                    assert new_parent is not None
+
+                except AssertionError:
+                    raise TaskException("Invalid selection for move target")
+
+                self.manager.move_task(target_task, new_parent)
+                self.interface.alert(f"Moved {parent_id} to {new_parent.path_str}")
 
     def from_prompt(self, input_prompt: str):
         result = self.parse_input(input_prompt)

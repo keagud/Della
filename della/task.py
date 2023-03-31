@@ -77,7 +77,6 @@ class Task:
 
     @parent.setter
     def parent(self, new_parent: Task | None):
-        #   import ipdb; ipdb.set_trace()
         if self._parent is not None:
             self._parent.subtasks.remove(self)
 
@@ -89,7 +88,6 @@ class Task:
     def __iter__(self):
         yield self
         if self.subtasks:
-            #  import ipdb; ipdb.set_trace()
             yield from chain.from_iterable(i for i in (s for s in self.subtasks))
 
     def decompose(self):
@@ -192,6 +190,11 @@ class TaskManager:
 
         self.reindex()
         return new_task
+
+    def move_task(self, target_task: Task, new_parent: Task):
+        self.reindex()
+        target_task.parent = new_parent
+        self.reindex()
 
     def __repr__(self):
         self.reindex()
