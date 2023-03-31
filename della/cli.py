@@ -68,7 +68,12 @@ class CLI_Parser(CommandParser):
         self.prompt_display = prompt_display
         self.prompt_color = prompt_color
         self.followup_prompt = followup_prompt
-        self.config = DellaConfig.load(config_file)
+
+        try:
+            self.config = DellaConfig.load(config_file)
+        except FileNotFoundError:
+            self.config = DellaConfig.default()
+            self.config.save(config_file)
 
         super().__init__(
             make_cli_interface(self.config.style),

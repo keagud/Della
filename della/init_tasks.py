@@ -11,7 +11,7 @@ import paramiko
 import toml
 from prompt_toolkit.styles import Style
 
-from .constants import CONFIG_PATH, REMOTE_PATH, TMP_SYNCFILE
+from .constants import CONFIG_PATH, DEFAULT_CONFIG, TMP_SYNCFILE
 
 
 def style_from_dict(style_dict: dict):
@@ -70,12 +70,7 @@ class DellaConfig:
 
     @classmethod
     def default(cls):
-        default_config = {
-            "local": {"tasks_file_local": "~/.local/della/tasks.toml"},
-            "remote": {"use_remote": False, "tasks_file_remote": REMOTE_PATH},
-        }
-
-        return DellaConfig(default_config, CONFIG_PATH)
+        return DellaConfig(DEFAULT_CONFIG, CONFIG_PATH)
 
     @classmethod
     def load(cls, filepath: str | Path = CONFIG_PATH):
