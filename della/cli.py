@@ -1,5 +1,4 @@
 import sys
-from itertools import cycle
 from pathlib import Path
 from shutil import get_terminal_size
 from signal import SIGINT, signal
@@ -9,8 +8,11 @@ from getchoice import ChoicePrinter
 from halo import Halo
 from prompt_toolkit import HTML, PromptSession, print_formatted_text
 from prompt_toolkit.completion import FuzzyCompleter
-from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.formatted_text import merge_formatted_text, to_formatted_text
 from prompt_toolkit.layout.processors import Processor
+from prompt_toolkit.styles import Style
+
+from della.init_tasks import DellaConfig
 
 from .command_parser import CommandParser, CommandsInterface
 from .completion import CommandProcessor, DateProcessor, TaskCompleter, TaskProcessor
@@ -18,15 +20,15 @@ from .constants import CONFIG_PATH
 from .task import Task, TaskException
 
 
-def make_cli_interface(normal_style: str, selected_style: str, title_style: str):
-    chooser = ChoicePrinter(
-        normal_style=normal_style,
-        title_style=title_style,
-        selected_style=selected_style,
-    )
+def _format_tag(text: str, tag: str):
+    return f"<{tag}>{text}</{tag}>"
 
-    def cli_alert(message: str, style=normal_style) -> None:
-        print_formatted_text(FormattedText([(style, message)]))
+
+def make_cli_interface(styling: Style):
+    chooser = ChoicePrinter(style=styling)
+
+    def cli_alert(message: str) -> None:
+        print_formatted_text(HTML(_format_tag(message, "alert")), style=styling)
 
     def cli_resolve_task(options: list[Task]) -> Task:
         alert_title = "Multiple matches!"
@@ -43,12 +45,11 @@ def make_cli_interface(normal_style: str, selected_style: str, title_style: str)
         if t.subtasks:
             delete_message += f"\nIt has {len(t.subtasks)} subtasks"
 
-        _, chosen = chooser.getchoice(
-            [("yes", True), ("no", False)], title=delete_message
-        )
+        _, chosen = chooser.yes_no(title=delete_message)
         return chosen
 
     def cli_resolve_sync() -> bool:
+        # TODO
         return True
 
     return CommandsInterface(
@@ -59,22 +60,19 @@ def make_cli_interface(normal_style: str, selected_style: str, title_style: str)
 class CLI_Parser(CommandParser):
     def __init__(
         self,
-        styling: dict = {
-            "normal_style": "skyblue",
-            "title_style": "skyblue bold",
-            "selected_style": "skyblue italic",
-        },
         config_file: str | Path = CONFIG_PATH,
         named_days: Optional[dict[str, str]] = None,
         prompt_display: str = "=> ",
-        prompt_color: str = "skyblue",
+        prompt_color: str = "ansicyan",
     ) -> None:
         self.prompt_display = prompt_display
         self.prompt_color = prompt_color
 
+        self.config = DellaConfig.load(config_file)
+
         super().__init__(
-            make_cli_interface(**styling),
-            config_file,
+            make_cli_interface(self.config.style),
+            self.config,
             named_days,
         )
 
@@ -93,18 +91,6 @@ class CLI_Parser(CommandParser):
         )
         self.indent = " "
 
-        color_options = [
-            "crimson",
-            "darkorange",
-            "gold",
-            "lawngreen",
-            "turquoise",
-            "skyblue",
-            "mediumslateblue",
-            "violet",
-        ]
-        self.colors_iter = cycle(reversed(color_options))
-
     def make_prompt_display(self):
         elements = ""
         if self.task_env != self.manager.root_task:
@@ -122,15 +108,12 @@ class CLI_Parser(CommandParser):
     def format_subtasks(
         self,
         t,
-        color=None,
         level=0,
         term_width: Optional[int] = None,
     ):
         if term_width is None:
             term_width, _ = get_terminal_size()
             term_width -= 5
-        if color is None:
-            color = next(self.colors_iter)
 
         ls = []
 
@@ -139,7 +122,6 @@ class CLI_Parser(CommandParser):
             content, subtask_summary, display_date = subtask.decompose()
 
             # TODO properly handle line breaks
-
             left_content = "".join(
                 (
                     f"{self.indent * level}{index}. ",
@@ -150,20 +132,20 @@ class CLI_Parser(CommandParser):
 
             right_padding = term_width - len(left_content)
 
-            formatted_line.append(f"<{color}>")
-
             formatted_line.append(left_content)
 
             if display_date:
                 formatted_line.append(f"{display_date:>{right_padding}}")
 
-            formatted_line.append(f"</{color}>")
+            line_str = _format_tag(
+                "".join(formatted_line) + "\n", f"task_level_{level}"
+            )
 
-            ls.append("".join(formatted_line))
+            line_formatted = to_formatted_text(HTML(line_str))
+            ls.append(line_formatted)
 
             if subtask.subtasks:
                 recurse_args = {
-                    "color": next(self.colors_iter),
                     "term_width": term_width,
                     "level": level + 1,
                 }
@@ -184,8 +166,8 @@ class CLI_Parser(CommandParser):
         return self.format_subtasks(root_task)
 
     def list(self, root_task: Task | None = None):
-        formatted = "\n".join(self.format_tasks(root_task=root_task))
-        print_formatted_text(HTML(formatted))
+        formatted = merge_formatted_text(self.format_tasks(root_task=root_task))
+        print_formatted_text(formatted, style=self.config.style)
 
     def prompt(self):
         self.from_prompt(

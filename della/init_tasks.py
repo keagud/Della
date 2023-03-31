@@ -3,13 +3,39 @@ import shutil
 import subprocess
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from itertools import count
 from pathlib import Path
 from typing import Any, Callable, NamedTuple, Optional
 
 import paramiko
 import toml
+from prompt_toolkit.styles import Style
 
 from .constants import CONFIG_PATH, REMOTE_PATH, TMP_SYNCFILE
+
+
+def style_from_dict(style_dict: dict):
+    styles = [f"{k}:ansi{v}" for k, v in style_dict.items() if k in ("fg", "bg")]
+    styles.append(style_dict.get("extra", ""))
+    return " ".join(styles)
+
+
+def iter_style(styles_list: list[dict]):
+    c = count()
+    return [(f"task_level_{next(c)}", style_from_dict(d)) for d in styles_list]
+
+
+def load_styles(styles_config: dict):
+    styles = iter_style(styles_config.pop("tasks_display"))
+
+    styles.extend(
+        [
+            (name.strip("choose_"), style_from_dict(content))
+            for name, content in styles_config.items()
+        ]
+    )
+
+    return Style(styles)
 
 
 class SyncConfig(NamedTuple):
@@ -25,6 +51,7 @@ class DellaConfig:
     init_dict: dict
     init_config_filepath: str | Path
 
+    style: Style = field(init=False)
     config_filepath: Path = field(init=False)
     use_remote: bool = field(init=False)
 
@@ -77,7 +104,7 @@ class DellaConfig:
     def __post_init__(self):
         remote_options = self.init_dict["remote"]
         local_options = self.init_dict["local"]
-        self.styles = self.init_dict["style"]
+        self.style = load_styles(self.init_dict["style"])
 
         self.config_filepath = Path(self.init_config_filepath).expanduser().resolve()
 

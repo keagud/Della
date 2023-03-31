@@ -10,7 +10,7 @@ from typing import Callable, NamedTuple, Optional
 from dateparse import DateParser
 from dateparse.parseutil import DateResult
 
-from .constants import COMMAND_ALIASES, CONFIG_PATH
+from .constants import COMMAND_ALIASES
 from .init_tasks import DellaConfig, SyncManager
 from .task import Task, TaskException, TaskManager
 
@@ -42,14 +42,14 @@ class CommandParser(metaclass=abc.ABCMeta):
     def __init__(
         self,
         interface: CommandsInterface,
-        config_path: str | Path = CONFIG_PATH,
+        config: DellaConfig,
         named_days: Optional[dict[str, str]] = None,
     ) -> None:
         self.date_parser = DateParser(named_days=named_days)
 
         self.interface = interface
 
-        self.config = DellaConfig.load(config_path)
+        self.config = config
 
         self.sync_manager: Optional[SyncManager] = None
 

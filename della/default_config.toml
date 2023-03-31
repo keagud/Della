@@ -8,26 +8,38 @@ use_remote = false
 
 [style]
 [[style.tasks_display]]
-fg = "#679436"
+fg = "cyan"
 
 [[style.tasks_display]]
-fg = "#ADB6C4"
+fg = "green"
 
 [[style.tasks_display]]
-fg = "#294C60"
+fg = "white"
 
 [style.normal]
-fg = "#ADB6C4"
+fg = "white"
 
 [style.alert]
-fg = "#6E0D25"
+fg = "red"
+extra = "bold"
 
-[style.highlight.command]
-fg = "#E55934"
+[style.highlight_command]
+fg = "blue"
+extra = "italic"
 
-[style.highlight.date]
-fg = "#ADB6C4"
-bg = "#6E0D25"
+[style.highlight_date]
+fg = "white"
+bg = "blue"
+extra = "italic"
 
-[style.highlight.task]
-fg = "#FFC49B"
+[style.highlight_task]
+fg = "yellow"
+extra = "bold"
+
+[style.choose_title]
+fg = "blue"
+[style.choose_selected]
+fg = "green"
+extra = "italic underline"
+[style.choose_unselected]
+fg = "cyan"
