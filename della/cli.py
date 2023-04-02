@@ -96,6 +96,9 @@ class CLI_Parser(CommandParser):
         )
         self.indent = " "
 
+        if self.config.start_message:
+            print_formatted_text(HTML(self.config.start_message))
+
     def make_prompt_display(self, followup: bool = False):
         elements = ""
 

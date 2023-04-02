@@ -54,6 +54,7 @@ class DellaConfig:
     style: Style = field(init=False)
     config_filepath: Path = field(init=False)
     use_remote: bool = field(init=False)
+    start_message: Optional[str] = None
 
     sync_config: Optional[SyncConfig] = None
 
@@ -100,6 +101,8 @@ class DellaConfig:
         remote_options = self.init_dict["remote"]
         local_options = self.init_dict["local"]
         self.style = load_styles(self.init_dict["style"])
+
+        self.start_message = self.init_dict.get("start_message")
 
         self.config_filepath = Path(self.init_config_filepath).expanduser().resolve()
 

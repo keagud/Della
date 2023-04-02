@@ -29,8 +29,13 @@ COMMAND_ALIASES: Final = {
     command: frozenset(aliases + [command]) for command, aliases in _commands.items()
 }
 
+DEFAULT_START_MESSAGE = """
+Type <ansiblue>@help</ansiblue> to see the command list
+"""
+
 
 DEFAULT_CONFIG: Final = {
+    "start_message": DEFAULT_START_MESSAGE,
     "local": {"task_file_local": "~/.local/della/tasks.toml"},
     "remote": {"use_remote": False},
     "style": {
