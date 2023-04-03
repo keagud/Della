@@ -213,5 +213,8 @@ class CommandParser(metaclass=abc.ABCMeta):
                 self.interface.alert(f"Moved {parent_id} to {new_parent.path_str}")
 
     def from_prompt(self, input_prompt: str):
+        if not input_prompt:
+            return None
+
         result = self.parse_input(input_prompt)
         self.resolve_input(result)
