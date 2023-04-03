@@ -33,6 +33,8 @@ Note that support for non-GNU/Linux operating systems is not guaranteed. It will
 
 # Configuration
 
+When run for the first time, `della` creates a config file at `$USER_HOME/.config/della/config.toml`. On each subsequent startup, it will read from this file to set options user options. The starting config file is commented to help you tweak it to your liking 
+
 
 # Remote Sync
 

@@ -12,11 +12,11 @@ from prompt_toolkit.formatted_text import merge_formatted_text, to_formatted_tex
 from prompt_toolkit.layout.processors import Processor
 from prompt_toolkit.styles import Style
 
-from della.init_tasks import DellaConfig
-
 from .command_parser import CommandParser, CommandsInterface
 from .completion import CommandProcessor, DateProcessor, TaskCompleter, TaskProcessor
 from .constants import CONFIG_PATH, HELP_MESSAGE
+from .default_config import DEFAULT_CONFIG_TEXT
+from .init_tasks import DellaConfig
 from .task import Task, TaskException
 
 
@@ -72,11 +72,11 @@ class CLI_Parser(CommandParser):
         self.prompt_color = prompt_color
         self.followup_prompt = followup_prompt
 
-        try:
-            self.config = DellaConfig.load(config_file)
-        except FileNotFoundError:
-            self.config = DellaConfig.default()
-            self.config.save(config_file)
+        if not Path(config_file).exists():
+            with open(config_file, "w") as new_config:
+                new_config.write(DEFAULT_CONFIG_TEXT)
+
+        self.config = DellaConfig.load(config_file)
 
         super().__init__(
             make_cli_interface(self.config.style),

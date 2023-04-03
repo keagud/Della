@@ -1,6 +1,10 @@
 from pathlib import Path
 from typing import Final
 
+import toml
+
+from .default_config import DEFAULT_CONFIG_TEXT
+
 
 def resolve_path(path_str: str) -> Path:
     return Path(path_str).expanduser().resolve()
@@ -35,22 +39,11 @@ Type <ansiblue>@help</ansiblue> to see the command list
 """
 
 
-DEFAULT_CONFIG: Final = {
-    "start_message": DEFAULT_START_MESSAGE,
-    "local": {"task_file_local": "~/.local/della/tasks.toml"},
-    "remote": {"use_remote": False},
-    "style": {
-        "tasks_display": [{"fg": "cyan"}, {"fg": "green"}, {"fg": "white"}],
-        "normal": {"fg": "white"},
-        "alert": {"fg": "red", "extra": "bold"},
-        "highlight_command": {"fg": "blue", "extra": "italic"},
-        "highlight_date": {"fg": "white", "bg": "blue", "extra": "italic"},
-        "highlight_task": {"fg": "yellow", "extra": "bold"},
-        "choose_title": {"fg": "blue"},
-        "choose_selected": {"fg": "green", "extra": "italic underline"},
-        "choose_unselected": {"fg": "cyan"},
-    },
-}
+DEFAULT_CONFIG: Final = toml.loads(DEFAULT_CONFIG_TEXT)
+
+
+with open("defcon.toml", "w") as outfile:
+    toml.dump(DEFAULT_CONFIG, outfile)
 
 
 HELP_MESSAGE = """
