@@ -3,6 +3,7 @@
 **Della** (named after [Perry Mason's assistant](https://en.wikipedia.org/wiki/Della_Street)) is a command line task organizer/todo list. Its basic concept is comparable to [Taskwarrior](https://taskwarrior.org/), but with the guiding philosophy that command syntax should be as simple and as close to natural language as possible. The ultimate goal is to make interactions with `della` feel more like speaking to a personal assistant than feeding input to a program.
 
 How does this cash out? First, you can specify due dates in natural language, and `della` will figure out what you mean: 
+
 ![1](screenshots/della-1.png)
 
 These expressions can be arbitrarily nested, just in case that's something you need:
@@ -48,7 +49,7 @@ Setting up a remote host for syncing is very simple; all you need is a working s
 Development of this project also resulted in the creation of two libraries:
 
   - [dateparse](https://github.com/keagud/dateparse) is the backend for parsing natural language into dates  
-  - [getchoice](https://github.com/keagud/getchoice) is a very simple almost-clone of [pick], which I created when I was unable to find anything like it that supported text formatting a la [prompt toolkit]
+  - [getchoice](https://github.com/keagud/getchoice) is a very simple almost-clone of [pick](https://github.com/wong2/pick), which I created when I was unable to find anything like it that supported text formatting a la [prompt toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit)
 
 They're both also available via pip, and licensed with no restrictions whatsoever. 
 
