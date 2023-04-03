@@ -4,6 +4,7 @@ import abc
 import logging
 import os
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 
@@ -149,8 +150,14 @@ class CommandParser(metaclass=abc.ABCMeta):
 
         if not command:
             new_task = self.manager.add_task(content, target_task, task_date)
+            date_message = ""
+
+            if task_date is not None and task_date != date.today():
+                day_delta = task_date.toordinal() - date.today().toordinal()
+                date_message = f" for {task_date.isoformat()}, in {day_delta} days"
+
             self.manager.reindex()
-            self.interface.alert(f"Added task: {new_task.path_str}")
+            self.interface.alert(f"Added task: {new_task.path_str}{date_message}")
             return
 
         matched_command = resolve_alias(command)
