@@ -1,6 +1,6 @@
 [tool]
 [tool.poetry]
-name = "della"
+name = "della-tasks"
 version = "0.1.0"
 homepage = "https://github.com/keagud/della"
 description = "Top-level package for Della."
