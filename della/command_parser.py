@@ -28,6 +28,7 @@ class CommandsInterface(NamedTuple):
     resolve_task: Callable[[list[Task]], Task]
     confirm_delete: Callable[[Task], bool]
     resolve_sync: Callable[[], bool]
+    show_help: Callable[..., None]
     query_input: Optional[Callable[[], str]] = None
 
 
@@ -155,6 +156,9 @@ class CommandParser(metaclass=abc.ABCMeta):
         matched_command = resolve_alias(command)
 
         match matched_command:
+            case "help":
+                self.interface.show_help()
+
             case "home":
                 self.task_env = self.manager.root_task
                 self.interface.alert("Set context to root")
