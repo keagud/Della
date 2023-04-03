@@ -17,7 +17,7 @@ While you can use `della` by passing your inputs directly as command line argume
 Wowee! Colors!  This is another trick to smooth out your interactions as much as possible - if your input is invalid, you can tell before you enter it. Autocomplete also gives you feedback while you type:
 [example]
 
-That should be enough to whet your appitite. Check out [Usage](#Usage) for a detailed tour of `della`'s features.
+That should be enough to whet your appetite. Check out [Usage](#Usage) for a detailed tour of `della`'s features.
 
 # Install
 
@@ -26,7 +26,7 @@ That should be enough to whet your appitite. Check out [Usage](#Usage) for a det
 $ pip install della
 ```
 
-Note that `della` is designed by and for Linux users, and that's where it's intended to be used. It will *probably* work ok on MacOS, but I don't have access to a Mac to test this (if you're a Mac user, please let me know about any exotic error messages you encounter). All bets are off for Windows. 
+Note that support for non-GNU/Linux operating systems is not guaranteed. It will *probably* work ok on MacOS, but I don't have access to a Mac to test this (if you're a Mac user, please let me know about any exotic error messages you encounter). All bets are off for Windows. 
 
 # Usage
 
@@ -42,7 +42,7 @@ Development of this project also resulted in the creation of two libraries:
   - [dateparse] is the backend for parsing natural language into dates  
   - [getchoice] is a very simple almost-clone of [pick], which I created when I was unable to find anything like it that supported text formatting a la [prompt toolkit]
 
-They're both also available via pip, and licensed with no restrictions whatsoever for your programming pleasure. 
+They're both also available via pip, and licensed with no restrictions whatsoever. 
 
 
 
