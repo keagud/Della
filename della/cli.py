@@ -99,9 +99,6 @@ class CLI_Parser(CommandParser):
         )
         self.indent = " "
 
-        if self.config.start_message:
-            print_formatted_text(HTML(self.config.start_message))
-
     def make_prompt_display(self, followup: bool = False):
         elements = ""
 
@@ -214,6 +211,8 @@ class CLI_Parser(CommandParser):
 
 def start_cli_prompt(*args, **kwargs):
     with CLI_Parser() as cli_prompt:
+        if cli_prompt.config.start_message:
+            print_formatted_text(HTML(cli_prompt.config.start_message))
         while True:
             try:
                 cli_prompt.prompt()

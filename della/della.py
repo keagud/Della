@@ -10,15 +10,11 @@ def make_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "-g",
-        "--graphical",
-        action="store_true",
-        help="Start della in a graphical TUI window (experimental!)",
-    )
-    parser.add_argument(
         "command",
-        nargs="*",
+        nargs="?",
+        type=str,
         help="Run a single command without opening the prompt interface",
+        default=None,
     )
 
     return parser
@@ -27,12 +23,9 @@ def make_parser():
 def run():
     args = make_parser().parse_args()
 
-    if args.graphical:
-        raise NotImplementedError
-
-    elif args.command:
+    if args.command is not None:
         with CLI_Parser() as cli_parser:
-            cli_parser.from_prompt(" ".join(args.command))
+            cli_parser.from_prompt(args.command)
 
     else:
         start_cli_prompt()
