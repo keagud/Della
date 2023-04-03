@@ -25,7 +25,7 @@ That should be enough to whet your appetite. For a crash course in usage and a l
 
 `della` is on PyPI - install it easily with `pip`: 
 ```bash
-$ pip install della
+$ pip install della-tasks
 ```
 
 Note that support for non-GNU/Linux operating systems is not guaranteed. It will *probably* work ok on MacOS, but I don't have access to a Mac to test this (if you're a Mac user, please let me know about any exotic error messages you encounter). All bets are off for Windows. 
