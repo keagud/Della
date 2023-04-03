@@ -16,7 +16,7 @@ from della.init_tasks import DellaConfig
 
 from .command_parser import CommandParser, CommandsInterface
 from .completion import CommandProcessor, DateProcessor, TaskCompleter, TaskProcessor
-from .constants import CONFIG_PATH
+from .constants import CONFIG_PATH, HELP_MESSAGE
 from .task import Task, TaskException
 
 
@@ -47,12 +47,15 @@ def make_cli_interface(styling: Style):
         _, chosen = chooser.yes_no(title=delete_message)
         return chosen
 
+    def cli_help():
+        print_formatted_text(HTML(HELP_MESSAGE))
+
     def cli_resolve_sync() -> bool:
         # TODO
         return True
 
     return CommandsInterface(
-        cli_alert, cli_resolve_task, cli_confirm_delete, cli_resolve_sync
+        cli_alert, cli_resolve_task, cli_confirm_delete, cli_resolve_sync, cli_help
     )
 
 
@@ -190,7 +193,7 @@ class CLI_Parser(CommandParser):
     def __enter__(self, *args, **kwargs):
         signal(SIGINT, self._sigint_handler)
 
-        if not self.config.use_remote:
+        if not self.config.use_remote or not self.config.sync_config:
             super().__enter__()
             return self
 
@@ -198,7 +201,7 @@ class CLI_Parser(CommandParser):
             return super().__enter__()
 
     def __exit__(self, *args, **kwargs):
-        if not self.config.use_remote:
+        if not self.config.use_remote or not self.config.sync_config:
             super().__exit__()
 
         with Halo(text="Syncing with remote", spinner="bouncingBar"):

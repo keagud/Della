@@ -19,9 +19,10 @@ _commands = {
         "rm",
     ],
     "set": ["cd"],
-    "home": ["h"],
+    "home": ["root"],
     "quit": ["q", "exit"],
     "move": ["mv"],
+    "help": ["h"],
 }
 
 
@@ -50,3 +51,43 @@ DEFAULT_CONFIG: Final = {
         "choose_unselected": {"fg": "cyan"},
     },
 }
+
+
+HELP_MESSAGE = """
+To add a task, just type it into the prompt:
+    get apples at the store <ansired>wednesday</ansired>
+
+If the task content includes a literal date you don't want to include as the due date,
+escape it with a '\\'
+
+To target a specific task for a command, prefix it with '#'. 
+You can also target its subtasks this way, e.g. <ansiyellow>#foo/bar/baz</ansiyellow>
+But you can also just target the subtask directly, e.g. <ansiyellow>#baz</ansiyellow>
+If the task pointed to is ambiguous, you will be prompted to clarify.
+
+Commands:
+    <ansiblue>@set, @cd</ansiblue> <ansiyellow>#task</ansiyellow>
+        Set a task as the current working project. 
+        Any new tasks added will use this task as its parent,
+        unless specified otherwise. 
+
+    <ansiblue>@home, @root</ansiblue>
+        Reset the current working project to the root.
+        
+    <ansiblue>@list, @ls</ansiblue>  <ansiyellow>[ #task ]</ansiyellow>
+        List the tasks in the current project, or the specified task if given.
+        
+    <ansiblue>@delete, @del, @rm</ansiblue> <ansiyellow>#task</ansiyellow>
+        Remove the specified task.
+
+    <ansiblue>@move, @mv</ansiblue> <ansiyellow>#task</ansiyellow>
+        Move a task and all its subtasks to a new parent. 
+        This will prompt a second time for the new parent.
+
+    <ansiblue>@quit, @q, @exit</ansiblue>
+        Exit Della. 
+        Your tasks are saved automatically, and synced to a remote server if configured.
+
+    <ansiblue>@help</ansiblue>
+        Prints this message. 
+"""
