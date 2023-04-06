@@ -40,7 +40,6 @@ pre-commit = "*"
 black = "*"
 ipython = "^8.11.0"
 ipdb = "^0.13.11"
-invoke = "^2.0.0"
 
 
 [tool.poetry.group.test.dependencies]
