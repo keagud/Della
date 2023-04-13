@@ -23,7 +23,6 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4"
-dateparse = "^1.0.0"
 toml = "^0.10.2"
 python-slugify = "^8.0.1"
 prompt-toolkit = "^3.0.38"
@@ -31,6 +30,7 @@ argparse = "^1.4.0"
 getchoice = "*"
 halo = "^0.0.31"
 paramiko = "^3.1.0"
+dateparse = { path = "./dateparse/", develop = true }
 
 [tool.poetry.group.dev.dependencies]
 isort = "*"

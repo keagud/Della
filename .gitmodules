@@ -1,0 +1,3 @@
+[submodule "dateparse"]
+	path = dateparse
+	url = http://github.com/keagud/dateparse.git
