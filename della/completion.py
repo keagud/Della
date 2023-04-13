@@ -2,7 +2,6 @@ from collections import deque
 from functools import reduce
 from typing import Any, Callable, Iterable, Optional, cast
 
-import dateparse
 from prompt_toolkit.completion import (
     CompleteEvent,
     Completer,
@@ -16,6 +15,8 @@ from prompt_toolkit.layout.processors import (
     Transformation,
     TransformationInput,
 )
+
+import dateparse
 
 from .constants import COMMAND_ALIASES
 from .task import Task, TaskManager

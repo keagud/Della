@@ -1,3 +1,6 @@
 [submodule "dateparse"]
 	path = dateparse
 	url = http://github.com/keagud/dateparse.git
+[submodule "getchoice"]
+	path = getchoice
+	url = http://github.com/keagud/getchoice.git
