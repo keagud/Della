@@ -10,7 +10,7 @@ These expressions can be arbitrarily nested, just in case that's something you n
 
 ![2](screenshots/della-2.png)
 
-While you can use `della` by passing your inputs directly as command line arguments, most of its features only become apparent when using its interactive prompt, which you can start by running the program without arguements. This makes the previous examples look like this
+While you can use `della` by passing your inputs directly as command line arguments, most of its features only become apparent when using its interactive prompt, which you can start by running the program without arguments. This makes the previous examples look like this
 
 ![3](screenshots/della-3.png)
 ![4](screenshots/della-4.png)
@@ -33,7 +33,7 @@ Note that support for non-GNU/Linux operating systems is not guaranteed. It will
 
 # Configuration
 
-When run for the first time, `della` creates a config file at `$USER_HOME/.config/della/config.toml`. On each subsequent startup, it will read from this file to set options user options. The starting config file is commented to help you tweak it to your liking.
+When run for the first time, `della` creates a config file at `$USER_HOME/.config/della/config.toml`. On each subsequent startup, it will read from this file to set user options. The starting config file is commented to help you tweak it to your liking.
 
 # Remote Sync
 `della` can keep your tasks in sync over multiple devices using SSH. 
